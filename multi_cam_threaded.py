@@ -57,7 +57,9 @@ class webcam_recording:
     def recording_stats(self):
         time.sleep(0.1)
         print('Frame lag = ' + str(self.in_count-self.out_count) + \
-              ', Avg FR = ' + str(np.mean(np.diff(self.time_list[-20:]))))
+              ', Avg FR = ' + str(np.mean(np.diff(self.time_list[-20:]))) + \
+              ', Total time = ' + str(self.time_list[-1] - \
+                                      self.time_list[0]))
                     
     def start_read(self):
         t = threading.Thread(target = self.read_frames, name='read_thread', args=())
