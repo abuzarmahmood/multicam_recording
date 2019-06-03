@@ -47,11 +47,12 @@ class webcam_recording:
             
     def write_frames(self):
         while True:
+            time.sleep(0.5/self.frame_rate)
             for cam in range(self.cam_num):
                 if len(self.all_buffers[cam]) > 0:
                     self.all_writers[cam].write(self.all_buffers[cam][0])
                     self.all_buffers[cam].pop(0)
-                    self.out_count += 1
+            self.out_count += 1
                     
     def recording_stats(self):
         time.sleep(0.1)
