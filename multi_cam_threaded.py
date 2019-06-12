@@ -15,8 +15,6 @@ import threading
 
 class webcam_recording:
     
-    in_count = 0
-    out_count = 0
     time_list = []
     moving_window = 100
     
@@ -27,7 +25,9 @@ class webcam_recording:
         self.total_frames = duration*frame_rate
         self.cam_num = cam_num
         self.resolution = resolution
-        
+        self.in_count = [0 for i in range(self.cam_num)]
+        self.out_count = [0 for i in range(self.cam_num)]
+             
     @staticmethod
     def testDevice(source):
         cap = cv2.VideoCapture(source) 
@@ -60,7 +60,7 @@ class webcam_recording:
             
     def read_frames(self):
         for count in range(self.total_frames):
-            if self.in_count > self.moving_window:
+            if min(self.in_count) > self.moving_window:
                 next_rate = 1/((1/self.frame_rate)*self.moving_window -  \
                             np.sum(np.diff(self.time_list[-self.moving_window:])))
             else:
@@ -68,7 +68,7 @@ class webcam_recording:
             time.sleep(1/next_rate)
             for cam in range(self.cam_num):
                 self.all_buffers[cam].append(self.all_cams[cam].read())
-            self.in_count += 1
+                self.in_count[cam] += 1
             self.time_list.append(time.time())
             
     def write_frames(self):
@@ -78,7 +78,7 @@ class webcam_recording:
                 if len(self.all_buffers[cam]) > 0:
                     self.all_writers[cam].write(self.all_buffers[cam][0])
                     self.all_buffers[cam].pop(0)
-            self.out_count += 1
+                    self.out_count[cam] += 1
                     
     def recording_stats(self):
         print('Frame lag = ' + str(self.in_count-self.out_count) + \
