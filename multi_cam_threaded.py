@@ -17,7 +17,8 @@ class webcam_recording:
     
     time_list = []
     moving_window = 100
-    
+    read_bool = 1
+    write_bool = 1    
     
     def __init__(self,duration,frame_rate, cam_num, resolution = (640,480)):
         self.duration = duration # in seconds
@@ -70,16 +71,22 @@ class webcam_recording:
                 self.all_buffers[cam].append(self.all_cams[cam].read())
                 self.in_count[cam] += 1
             self.time_list.append(time.time())
-            
+        
+        self.read_bool = 0
+ 
     def write_frames(self):
-        while True:
+        while self.write_bool > 0 or self.read_bool > 0:
             time.sleep(0.5/self.frame_rate)
             for cam in range(self.cam_num):
                 if len(self.all_buffers[cam]) > 0:
                     self.all_writers[cam].write(self.all_buffers[cam][0])
                     self.all_buffers[cam].pop(0)
                     self.out_count[cam] += 1
-                    
+             
+            self.write_bool = \
+                sum([out_count < in_count for (out_count, in_count) in \
+                     zip(self.out_count, self.in_count)])
+                   
     def print_stats(self):
         print(
                 'Frame lag = {0}, Avg FR = {1}, , Total time = {2}'.format(
@@ -98,6 +105,7 @@ class webcam_recording:
     def start_write(self):
         t = threading.Thread(target = self.write_frames, name='print_thread', args=())
         t.start()
+        t.join()
         print('Writing frames now')
         return self
     
