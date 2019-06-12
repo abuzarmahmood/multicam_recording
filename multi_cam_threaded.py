@@ -58,6 +58,13 @@ class webcam_recording:
                                            self.resolution) \
                             for i in range(self.cam_num) ]
         print('Writers initialized')
+
+    def shut_down(self):
+        for cam in self.all_cams:
+            cam.stop()
+        
+        for writer in self.all_writers:
+            writer.release()
             
     def read_frames(self):
         for count in range(self.total_frames):
@@ -114,3 +121,4 @@ class webcam_recording:
         self.initialize_writers()
         self.start_read()
         self.write_frames()
+        self.shut_down()
