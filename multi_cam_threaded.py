@@ -102,6 +102,11 @@ class webcam_recording:
                   str(self.time_list[-1] - self.time_list[0])
                   ))
                      
+    def output_time(self):
+        with open("time_list.txt","a") as out_file:
+            for time_point in self.time_list:
+                out_file.write(str(time_point) + '\n')        
+
     def start_read(self):
         t = threading.Thread(target = self.read_frames, name='read_thread', args=())
         t.daemon = True
@@ -122,3 +127,5 @@ class webcam_recording:
         self.start_read()
         self.write_frames()
         self.shut_down()
+        self.output_time()
+        self.print_stats()
