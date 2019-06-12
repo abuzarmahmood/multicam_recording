@@ -44,6 +44,7 @@ class webcam_recording:
             self.all_cams = [VideoStream(src = i).start() for i in range(self.cam_num)]
             self.all_buffers = [[] for i in range(self.cam_num)]
             print('Cameras initialized')
+
         else:
             print("Only available devices are:")
             print(list(zip(range(self.cam_num),self.check_list)))
@@ -55,6 +56,7 @@ class webcam_recording:
                                            self.frame_rate, 
                                            self.resolution) \
                             for i in range(self.cam_num) ]
+        print('Writers initialized')
             
     def read_frames(self):
         for count in range(self.total_frames):
@@ -87,11 +89,13 @@ class webcam_recording:
         t = threading.Thread(target = self.read_frames, name='read_thread', args=())
         t.daemon = True
         t.start()
+        print('Reading frames now')
         return self
     
     def start_write(self):
         t = threading.Thread(target = self.write_frames, name='print_thread', args=())
         t.start()
+        print('Writing frames now')
         return self
     
     def start_recording(self):
