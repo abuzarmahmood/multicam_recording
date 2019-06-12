@@ -28,7 +28,14 @@ class webcam_recording:
         self.cam_num = cam_num
         self.resolution = resolution
         
-        
+    @staticmethod
+    def testDevice(source):
+        cap = cv2.VideoCapture(source) 
+        if cap is None or not cap.isOpened():
+            return 0
+        else:
+            return 1
+       
     def initialize_cameras(self):
         self.all_cams = [VideoStream(src = i).start() for i in range(self.cam_num)]
         self.all_buffers = [[] for i in range(self.cam_num)]
