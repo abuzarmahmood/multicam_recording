@@ -80,11 +80,14 @@ class webcam_recording:
                     self.all_buffers[cam].pop(0)
                     self.out_count[cam] += 1
                     
-    def recording_stats(self):
-        print('Frame lag = ' + str(self.in_count-self.out_count) + \
-              ', Avg FR = ' + str(np.mean(np.diff(self.time_list[-self.moving_window:]))) + \
-              ', Total time = ' + str(self.time_list[-1] - self.time_list[0]))
-                    
+    def print_stats(self):
+        print(
+                'Frame lag = {0}, Avg FR = {1}, , Total time = {2}'.format(
+                  str(np.asarray(self.in_count) - np.asarray(self.out_count)),
+                  str(np.mean(np.diff(self.time_list[-self.moving_window:]))),
+                  str(self.time_list[-1] - self.time_list[0])
+                  ))
+                     
     def start_read(self):
         t = threading.Thread(target = self.read_frames, name='read_thread', args=())
         t.daemon = True
