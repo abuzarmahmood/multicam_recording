@@ -37,8 +37,17 @@ class webcam_recording:
             return 1
        
     def initialize_cameras(self):
-        self.all_cams = [VideoStream(src = i).start() for i in range(self.cam_num)]
-        self.all_buffers = [[] for i in range(self.cam_num)]
+        
+        self.check_list = [self.testDevice(i) for i in range(self.cam_num)]
+        
+        if sum(self.check_list) == self.cam_num:
+            self.all_cams = [VideoStream(src = i).start() for i in range(self.cam_num)]
+            self.all_buffers = [[] for i in range(self.cam_num)]
+            print('Cameras initialized')
+        else:
+            print("Only available devices are:")
+            print(list(zip(range(self.cam_num),self.check_list)))
+            print('Change cam_num')
         
     def initialize_writers(self):
         self.all_writers = [cv2.VideoWriter('outpy%i.avi' %i,
