@@ -19,7 +19,8 @@ class webcam_recording:
     moving_window = 100
     read_bool = 1
     write_bool = 1    
-    
+    time_bool = 0
+ 
     def __init__(self,duration,frame_rate, cam_num, resolution = (640,480)):
         self.duration = duration # in seconds
         self.frame_rate = frame_rate # in # per second
@@ -78,7 +79,7 @@ class webcam_recording:
                 self.all_buffers[cam].append(self.all_cams[cam].read())
                 self.in_count[cam] += 1
             self.time_list.append(time.time())
-        
+            self.time_bool = 1        
         self.read_bool = 0
  
     def write_frames(self):
@@ -93,7 +94,12 @@ class webcam_recording:
             self.write_bool = \
                 sum([out_count < in_count for (out_count, in_count) in \
                      zip(self.out_count, self.in_count)])
-                   
+            
+            if self.time_bool == 1:
+                with open("time_list.txt","a") as out_file:
+                    out_file.write(str(self.time_list[-1]) + '\n')        
+                self.time_bool = 0
+
     def print_stats(self):
         print(
                 'Frame lag = {0}, Avg FR = {1}, , Total time = {2}'.format(
@@ -102,11 +108,6 @@ class webcam_recording:
                   str(self.time_list[-1] - self.time_list[0])
                   ))
                      
-    def output_time(self):
-        with open("time_list.txt","a") as out_file:
-            for time_point in self.time_list:
-                out_file.write(str(time_point) + '\n')        
-
     def start_read(self):
         t = threading.Thread(target = self.read_frames, name='read_thread', args=())
         t.daemon = True
@@ -127,5 +128,4 @@ class webcam_recording:
         self.start_read()
         self.write_frames()
         self.shut_down()
-        self.output_time()
         self.print_stats()
