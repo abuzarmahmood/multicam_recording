@@ -12,6 +12,8 @@ import time
 import cv2
 import pylab as plt
 import threading
+import os
+import re
 
 class webcam_recording:
     
@@ -37,13 +39,17 @@ class webcam_recording:
             return 0
         else:
             return 1
-       
+    
+    def getDevices(self):
+        dir_list = os.listdir('/dev/')
+        device_list = [x for x in dir_list if re.match('video',x)]
+        self.device_ids = [int(re.findall(r'\d+',x)[0]) for x in device_list]
+
     def initialize_cameras(self):
         
-        self.check_list = [self.testDevice(i) for i in range(self.cam_num)]
-        
+        self.check_list = [self.testDevice(i) for i in self.device_ids[:self.cam_num]]
         if sum(self.check_list) == self.cam_num:
-            self.all_cams = [VideoStream(src = i).start() for i in range(self.cam_num)]
+            self.all_cams = [VideoStream(src = i).start() for i in self.device_ids[:cam_num]]
             self.all_buffers = [[] for i in range(self.cam_num)]
             print('Cameras initialized')
 
@@ -123,6 +129,7 @@ class webcam_recording:
         return self
     
     def start_recording(self):
+        self.getDevices()
         self.initialize_cameras()
         self.initialize_writers()
         self.start_read()
