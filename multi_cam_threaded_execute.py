@@ -10,7 +10,7 @@ import pylab as plt
 import numpy as np
 import datetime
 
-this_recording = webcam_recording(60*10,30,3)
+this_recording = webcam_recording(10,30,3)
 
 # =============================================================================
 # this_recording.initialize_cameras()
@@ -23,6 +23,3 @@ this_recording = webcam_recording(60*10,30,3)
 print('Start time = ' + str(datetime.datetime.now()))
 this_recording.start_recording()
 print('End time = ' + str(datetime.datetime.now()))
-
-this_recording.recording_stats()
-plt.plot(np.diff(this_recording.time_list))

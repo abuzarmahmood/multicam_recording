@@ -49,7 +49,8 @@ class webcam_recording:
         
         self.check_list = [self.testDevice(i) for i in self.device_ids[:self.cam_num]]
         if sum(self.check_list) == self.cam_num:
-            self.all_cams = [VideoStream(src = i).start() for i in self.device_ids[:cam_num]]
+            self.all_cams = [VideoStream(src = i).start() \
+                    for i in self.device_ids[:self.cam_num]]
             self.all_buffers = [[] for i in range(self.cam_num)]
             print('Cameras initialized')
 
