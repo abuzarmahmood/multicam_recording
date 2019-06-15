@@ -23,14 +23,22 @@ class webcam_recording:
     write_bool = 1    
     time_bool = 0
  
-    def __init__(self,duration,frame_rate, cam_num, resolution = (640,480)):
+    def __init__(self,
+                duration,
+                frame_rate, 
+                cam_num, 
+                file_name = 'outpy',
+                resolution = (640,480)):
+
         self.duration = duration # in seconds
         self.frame_rate = frame_rate # in # per second
         self.total_frames = duration*frame_rate
+        self.file_name = file_name
         self.cam_num = cam_num
         self.resolution = resolution
         self.in_count = [0 for i in range(self.cam_num)]
         self.out_count = [0 for i in range(self.cam_num)]
+
              
     @staticmethod
     def testDevice(source):
@@ -63,11 +71,12 @@ class webcam_recording:
             print('Change cam_num')
         
     def initialize_writers(self):
-        self.all_writers = [cv2.VideoWriter('outpy%i.avi' %i,
-                                           cv2.VideoWriter_fourcc('M','J','P','G'), 
-                                           self.frame_rate, 
-                                           self.resolution) \
-                            for i in range(self.cam_num) ]
+        self.all_writers = \
+            [cv2.VideoWriter('{0}_cam{1}.avi'.format(self.file_name,i),
+                   cv2.VideoWriter_fourcc('M','J','P','G'), 
+                   self.frame_rate, 
+                   self.resolution) \
+                        for i in range(self.cam_num) ]
         print('Writers initialized')
 
     def shut_down(self):
@@ -106,7 +115,8 @@ class webcam_recording:
                      zip(self.out_count, self.in_count)])
             
             if self.time_bool == 1:
-                with open("time_list.txt","a") as out_file:
+                with open("{0}_time_list.txt".format(self.file_name),"a") \
+                        as out_file:
                     out_file.write(str(self.time_list[-1]) + '\n')        
                 self.time_bool = 0
 
