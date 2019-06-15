@@ -42,14 +42,18 @@ class webcam_recording:
     
     def getDevices(self):
         dir_list = os.listdir('/dev/')
-        device_list = [x for x in dir_list if re.match('video',x)]
-        self.device_ids = [int(re.findall(r'\d+',x)[0]) for x in device_list]
+        device_list = [x for x in dir_list if re.match('video[0-9]',x)]
+        temp_device_ids = [int(re.findall(r'\d+',x)[0]) for x in device_list]
+        temp_device_ids.sort()
+        self.device_ids = temp_device_ids
 
     def initialize_cameras(self):
         
         self.check_list = [self.testDevice(i) for i in self.device_ids[:self.cam_num]]
         if sum(self.check_list) == self.cam_num:
-            self.all_cams = [VideoStream(src = i).start() for i in self.device_ids[:cam_num]]
+            self.all_cams = [VideoStream(src = i,
+                                        resolution = self.resolution).start() \
+                                                for i in self.device_ids[:self.cam_num]]
             self.all_buffers = [[] for i in range(self.cam_num)]
             print('Cameras initialized')
 
