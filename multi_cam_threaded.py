@@ -106,7 +106,8 @@ class webcam_recording:
                 for this_pic,this_ax in \
                 zip([buffer[0] for buffer in self.all_buffers],
                     ax_list)]
-        fig.canvas.draw()
+        #fig.canvas.draw()
+        plt.ion()
         plt.show(block=False)
         for frame in range(len(self.all_buffers[0])):
             for vid in range(len(vid_list)):
@@ -125,7 +126,7 @@ class webcam_recording:
         def writeTimeList(self):
             with open("{0}_time_list.txt".format(self.file_name),"a") \
                     as out_file:
-                out_file.write(str(self.time_list[-1]) + '\n')        
+                out_file.write(str(self.time_list[self.out_count[0]-1]) + '\n')       
         
         def calcWriteBool(self):
             self.write_bool = \
