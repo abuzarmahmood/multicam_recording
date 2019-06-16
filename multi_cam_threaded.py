@@ -13,6 +13,7 @@ import time
 import cv2
 import numpy as np
 from imutils.video import VideoStream
+import pylab as plt
 
 class webcam_recording:
     time_list = []
@@ -98,7 +99,21 @@ class webcam_recording:
             self.time_list.append(time.time())
             self.buffer_bool = 1        
         self.read_bool = 0
- 
+
+    def playFromBuffer(self):
+        fig, ax_list = plt.subplots(1,self.cam_num)
+        vid_list = [this_ax.imshow(this_pic,origin='lower')\
+                for this_pic,this_ax in \
+                zip([buffer[0] for buffer in self.all_buffers],
+                    ax_list)]
+        fig.canvas.draw()
+        plt.show(block=False)
+        for frame in range(len(self.all_buffers[0])):
+            for vid in range(len(vid_list)):
+                vid_list[vid].set_data(self.all_buffers[vid][frame])
+            fig.canvas.draw()
+            time.sleep(1/self.frame_rate)
+
     def write_frames(self):
         # Define inner methods to simplify flow of main statement
         def writeAllCams(self):
