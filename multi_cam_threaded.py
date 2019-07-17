@@ -83,8 +83,8 @@ class webcam_recording:
         for cam in self.all_cams:
             cam.stop()
         
-        for writer in self.all_writers:
-            writer.release()
+        #for writer in self.all_writers:
+        #    writer.release()
             
     def read_frames(self):
         for count in range(self.total_frames):
@@ -107,6 +107,28 @@ class webcam_recording:
             for cam in range(self.cam_num):
                 if len(self.all_buffers[cam]) > 0:
                     self.all_writers[cam].write(self.all_buffers[cam][0])
+                    self.all_buffers[cam].pop(0)
+                    self.out_count[cam] += 1
+             
+            self.write_bool = \
+                sum([out_count < in_count for (out_count, in_count) in \
+                     zip(self.out_count, self.in_count)])
+            
+            if self.time_bool == 1:
+                with open("{0}_time_list.txt".format(self.file_name),"a") \
+                        as out_file:
+                    out_file.write(str(self.time_list[-1]) + '\n')        
+                self.time_bool = 0
+
+    def write_images(self):
+        while self.write_bool > 0 or self.read_bool > 0:
+            time.sleep(0.5/self.frame_rate)
+            for cam in range(self.cam_num):
+                if len(self.all_buffers[cam]) > 0:
+                    cv2.imwrite('{0}_cam{2}_{1}.png'.\
+                            format(self.file_name,self.out_count[cam],cam),
+                            self.all_buffers[cam][0])
+                    #self.all_writers[cam].write(self.all_buffers[cam][0])
                     self.all_buffers[cam].pop(0)
                     self.out_count[cam] += 1
              
@@ -145,8 +167,9 @@ class webcam_recording:
     def start_recording(self):
         self.getDevices()
         self.initialize_cameras()
-        self.initialize_writers()
+        #self.initialize_writers()
         self.start_read()
-        self.write_frames()
+        #self.write_frames()
+        self.write_images()
         self.shut_down()
         self.print_stats()
