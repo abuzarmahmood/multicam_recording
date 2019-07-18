@@ -125,7 +125,7 @@ class webcam_recording:
             time.sleep(0.5/self.frame_rate)
             for cam in range(self.cam_num):
                 if len(self.all_buffers[cam]) > 0:
-                    cv2.imwrite('{0}_cam{2}_{1}.png'.\
+                    cv2.imwrite('{0}_cam{2}_{1:06d}.png'.\
                             format(self.file_name,self.out_count[cam],cam),
                             self.all_buffers[cam][0])
                     #self.all_writers[cam].write(self.all_buffers[cam][0])
