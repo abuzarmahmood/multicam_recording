@@ -103,7 +103,7 @@ class webcam_recording:
  
     def write_frames(self):
         while self.write_bool > 0 or self.read_bool > 0:
-            time.sleep(0.5/self.frame_rate)
+            time.sleep(0.1/self.frame_rate)
             for cam in range(self.cam_num):
                 if len(self.all_buffers[cam]) > 0:
                     self.all_writers[cam].write(self.all_buffers[cam][0])
@@ -158,10 +158,13 @@ class webcam_recording:
         return self
     
     def start_write(self):
-        t = threading.Thread(target = self.write_frames, name='print_thread', args=())
+        t = threading.Thread(
+                target = self.write_images, 
+                name='print_thread', 
+                args=())
         t.start()
-        t.join()
         print('Writing frames now')
+        t.join()
         return self
     
     def start_recording(self):
@@ -169,7 +172,6 @@ class webcam_recording:
         self.initialize_cameras()
         #self.initialize_writers()
         self.start_read()
-        #self.write_frames()
-        self.write_images()
+        self.start_write()
         self.shut_down()
         self.print_stats()
