@@ -8,6 +8,7 @@ Created on Mon Jun  3 11:47:53 2019
 
 from imutils.video import VideoStream
 import numpy as np
+import tables
 import time
 import cv2
 import pylab as plt
@@ -94,13 +95,15 @@ class webcam_recording:
             else:
                 next_rate = self.frame_rate
             time.sleep(1/next_rate)
+            #time.sleep(np.max([0,1/next_rate]))
             for cam in range(self.cam_num):
                 self.all_buffers[cam].append(self.all_cams[cam].read())
                 self.in_count[cam] += 1
             self.time_list.append(time.time())
             self.time_bool = 1        
         self.read_bool = 0
- 
+
+    # To write out to video
     def write_frames(self):
         while self.write_bool > 0 or self.read_bool > 0:
             time.sleep(0.1/self.frame_rate)
@@ -120,17 +123,51 @@ class webcam_recording:
                     out_file.write(str(self.time_list[-1]) + '\n')        
                 self.time_bool = 0
 
+    # To write out to images
     def write_images(self):
         while self.write_bool > 0 or self.read_bool > 0:
             time.sleep(0.5/self.frame_rate)
             for cam in range(self.cam_num):
                 if len(self.all_buffers[cam]) > 0:
-                    cv2.imwrite('{0}_cam{2}_{1:06d}.png'.\
+                    np.save('{0}_cam{2}_{1:06d}'.\
                             format(self.file_name,self.out_count[cam],cam),
                             self.all_buffers[cam][0])
+                    #cv2.imwrite('{0}_cam{2}_{1:06d}.png'.\
+                    #        format(self.file_name,self.out_count[cam],cam),
+                    #        self.all_buffers[cam][0])
                     #self.all_writers[cam].write(self.all_buffers[cam][0])
                     self.all_buffers[cam].pop(0)
                     self.out_count[cam] += 1
+             
+            self.write_bool = \
+                sum([out_count < in_count for (out_count, in_count) in \
+                     zip(self.out_count, self.in_count)])
+            
+            if self.time_bool == 1:
+                with open("{0}_time_list.txt".format(self.file_name),"a") \
+                        as out_file:
+                    out_file.write(str(self.time_list[-1]) + '\n')        
+                self.time_bool = 0
+    
+    def initialize_hdf5(self):
+        self.hf5 = tables.open_file(self.file_name + '.h5', mode = 'w')
+        for cam in range(len(self.all_cams)):
+            self.hf5.create_group('/','cam{0}'.format(cam))
+
+    # To write out to HDF5
+    def write_hdf5(self):
+        while self.write_bool > 0 or self.read_bool > 0:
+            time.sleep(0.5/self.frame_rate)
+            for cam in range(self.cam_num):
+                if len(self.all_buffers[cam]) > 0:
+                    temp_img = self.all_buffers[cam][0]
+                    self.all_buffers[cam].pop(0)
+                    self.hf5.create_array('/cam{0}'.format(cam),
+                            'cam{1}_{0:06d}'.\
+                            format(self.out_count[cam],cam),
+                            temp_img)
+                    self.out_count[cam] += 1
+                    #self.hf5.flush()
              
             self.write_bool = \
                 sum([out_count < in_count for (out_count, in_count) in \
@@ -171,6 +208,7 @@ class webcam_recording:
         self.getDevices()
         self.initialize_cameras()
         #self.initialize_writers()
+        #self.initialize_hdf5()
         self.start_read()
         self.start_write()
         self.shut_down()
