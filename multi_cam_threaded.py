@@ -15,6 +15,9 @@ import pylab as plt
 import threading
 import os
 import re
+import glob
+import tqdm
+import warnings
 
 class webcam_recording:
     
@@ -39,6 +42,8 @@ class webcam_recording:
         self.resolution = resolution
         self.in_count = [0 for i in range(self.cam_num)]
         self.out_count = [0 for i in range(self.cam_num)]
+
+        warnings.filterwarnings('ignore', category=tables.NaturalNameWarning)
 
              
     @staticmethod
@@ -71,14 +76,14 @@ class webcam_recording:
             print(list(zip(range(self.cam_num),self.check_list)))
             print('Change cam_num')
         
-    def initialize_writers(self):
-        self.all_writers = \
-            [cv2.VideoWriter('{0}_cam{1}.avi'.format(self.file_name,i),
-                   cv2.VideoWriter_fourcc('M','J','P','G'), 
-                   self.frame_rate, 
-                   self.resolution) \
-                        for i in range(self.cam_num) ]
-        print('Writers initialized')
+    #def initialize_writers(self):
+    #    self.all_writers = \
+    #        [cv2.VideoWriter('{0}_cam{1}.avi'.format(self.file_name,i),
+    #               cv2.VideoWriter_fourcc('M','J','P','G'), 
+    #               self.frame_rate, 
+    #               self.resolution) \
+    #                    for i in range(self.cam_num) ]
+    #    print('Writers initialized')
 
     def shut_down(self):
         for cam in self.all_cams:
@@ -103,38 +108,36 @@ class webcam_recording:
             self.time_bool = 1        
         self.read_bool = 0
 
-    # To write out to video
-    def write_frames(self):
-        while self.write_bool > 0 or self.read_bool > 0:
-            time.sleep(0.1/self.frame_rate)
-            for cam in range(self.cam_num):
-                if len(self.all_buffers[cam]) > 0:
-                    self.all_writers[cam].write(self.all_buffers[cam][0])
-                    self.all_buffers[cam].pop(0)
-                    self.out_count[cam] += 1
-             
-            self.write_bool = \
-                sum([out_count < in_count for (out_count, in_count) in \
-                     zip(self.out_count, self.in_count)])
-            
-            if self.time_bool == 1:
-                with open("{0}_time_list.txt".format(self.file_name),"a") \
-                        as out_file:
-                    out_file.write(str(self.time_list[-1]) + '\n')        
-                self.time_bool = 0
+    ## To write out to video
+    #def write_frames(self):
+    #    while self.write_bool > 0 or self.read_bool > 0:
+    #        time.sleep(0.1/self.frame_rate)
+    #        for cam in range(self.cam_num):
+    #            if len(self.all_buffers[cam]) > 0:
+    #                self.all_writers[cam].write(self.all_buffers[cam][0])
+    #                self.all_buffers[cam].pop(0)
+    #                self.out_count[cam] += 1
+    #         
+    #        self.write_bool = \
+    #            sum([out_count < in_count for (out_count, in_count) in \
+    #                 zip(self.out_count, self.in_count)])
+    #        
+    #        if self.time_bool == 1:
+    #            with open("{0}_time_list.txt".format(self.file_name),"a") \
+    #                    as out_file:
+    #                out_file.write(str(self.time_list[-1]) + '\n')        
+    #            self.time_bool = 0
 
-    # To write out to images
+    # To write out to binary files
     def write_images(self):
+        os.mkdir(os.path.dirname(self.file_name) + '/temp')
         while self.write_bool > 0 or self.read_bool > 0:
             time.sleep(0.5/self.frame_rate)
             for cam in range(self.cam_num):
                 if len(self.all_buffers[cam]) > 0:
-                    np.save('{0}_cam{2}_{1:06d}'.\
-                            format(self.file_name,self.out_count[cam],cam),
+                    np.save(os.path.dirname(self.file_name) + '/temp/{0}_cam{2}_{1:06d}'.\
+                            format(os.path.basename(self.file_name),self.out_count[cam],cam),
                             self.all_buffers[cam][0])
-                    #cv2.imwrite('{0}_cam{2}_{1:06d}.png'.\
-                    #        format(self.file_name,self.out_count[cam],cam),
-                    #        self.all_buffers[cam][0])
                     #self.all_writers[cam].write(self.all_buffers[cam][0])
                     self.all_buffers[cam].pop(0)
                     self.out_count[cam] += 1
@@ -148,36 +151,83 @@ class webcam_recording:
                         as out_file:
                     out_file.write(str(self.time_list[-1]) + '\n')        
                 self.time_bool = 0
-    
-    def initialize_hdf5(self):
-        self.hf5 = tables.open_file(self.file_name + '.h5', mode = 'w')
-        for cam in range(len(self.all_cams)):
-            self.hf5.create_group('/','cam{0}'.format(cam))
 
-    # To write out to HDF5
-    def write_hdf5(self):
-        while self.write_bool > 0 or self.read_bool > 0:
-            time.sleep(0.5/self.frame_rate)
-            for cam in range(self.cam_num):
-                if len(self.all_buffers[cam]) > 0:
-                    temp_img = self.all_buffers[cam][0]
-                    self.all_buffers[cam].pop(0)
-                    self.hf5.create_array('/cam{0}'.format(cam),
-                            'cam{1}_{0:06d}'.\
-                            format(self.out_count[cam],cam),
-                            temp_img)
-                    self.out_count[cam] += 1
-                    #self.hf5.flush()
-             
-            self.write_bool = \
-                sum([out_count < in_count for (out_count, in_count) in \
-                     zip(self.out_count, self.in_count)])
-            
-            if self.time_bool == 1:
-                with open("{0}_time_list.txt".format(self.file_name),"a") \
-                        as out_file:
-                    out_file.write(str(self.time_list[-1]) + '\n')        
-                self.time_bool = 0
+    # Finds list of available binary files
+    @staticmethod
+    def list_binary_files(directory):
+        file_list = [os.path.basename(x) for x in glob.glob(directory + '/*.npy')]
+        #file_dict = dict((cam,[]) for cam in range(cam_num))
+        #for file in file_list:
+        #    file_dict[int(file[file.find('cam')+3])].append(file)
+        cam_list = [int(file[file.find('cam')+3]) for file in file_list]
+        return list(zip(file_list,cam_list))
+
+    ##   Converts numpy array to img 
+    #def npy2img(self,file_name):
+    #    img_array = np.load(file_name)
+    #    retval = cv2.imwrite(file_name.split('.')[0] + '.png', img_array)
+    #    return retval
+    
+
+    ## Convert binary images to png
+    #def bin2img_execute(self):
+    #    file_list, file_dict = self.list_binary_files('./',self.cam_num)
+    #    retval_list = []
+    #    for file in tqdm(cam_file_list):
+    #        retval_list.append(npy2img(file))
+    #    retval_list = [npy2img(file) for file in cam_file_list]
+    #    return file_list, retval_list
+        
+    # Load binary images into hdf5
+    def bin2hf5(self):
+        self.hf5 = self.initialize_hdf5(self.file_name,self.cam_num)
+        self.hf5_count = 0
+        while self.hf5_count <= sum(self.out_count):
+            time.sleep(1/self.frame_rate)
+            file_list = self.list_binary_files(os.path.dirname(self.file_name) + '/temp')
+            if len(file_list) > 0:
+                for file in file_list:
+                    temp_img = np.load(os.path.dirname(self.file_name) + '/temp/' + file[0])
+                    self.hf5.create_array('/cam{0}'.format(file[1]),\
+                            file[0].split('.')[0],temp_img)
+                    self.hf5.flush()
+                    self.hf5_count += 1
+                    os.remove(os.path.dirname(self.file_name) + '/temp/'+file[0])
+            else:
+                pass
+        self.hf5.close()
+
+    @staticmethod
+    def initialize_hdf5(file_name,cam_num):
+        hf5 = tables.open_file(file_name + '.h5', mode = 'w')
+        for cam in range(cam_num):
+            hf5.create_group('/','cam{0}'.format(cam))
+        return hf5
+
+    ## To write out to HDF5
+    #def write_hdf5(self):
+    #    while self.write_bool > 0 or self.read_bool > 0:
+    #        time.sleep(0.5/self.frame_rate)
+    #        for cam in range(self.cam_num):
+    #            if len(self.all_buffers[cam]) > 0:
+    #                temp_img = self.all_buffers[cam][0]
+    #                self.all_buffers[cam].pop(0)
+    #                self.hf5.create_array('/cam{0}'.format(cam),
+    #                        'cam{1}_{0:06d}'.\
+    #                        format(self.out_count[cam],cam),
+    #                        temp_img)
+    #                self.out_count[cam] += 1
+    #                #self.hf5.flush()
+    #         
+    #        self.write_bool = \
+    #            sum([out_count < in_count for (out_count, in_count) in \
+    #                 zip(self.out_count, self.in_count)])
+    #        
+    #        if self.time_bool == 1:
+    #            with open("{0}_time_list.txt".format(self.file_name),"a") \
+    #                    as out_file:
+    #                out_file.write(str(self.time_list[-1]) + '\n')        
+    #            self.time_bool = 0
 
     def print_stats(self):
         print(
@@ -204,12 +254,21 @@ class webcam_recording:
         t.join()
         return self
     
+    def start_hdf5_write(self):
+        t = threading.Thread(
+                target = self.bin2hf5,
+                name = 'hf5_thread',
+                args = ())
+        t.start()
+        print('Writing to HDF5 now')
+        return self
+
     def start_recording(self):
         self.getDevices()
         self.initialize_cameras()
         #self.initialize_writers()
-        #self.initialize_hdf5()
         self.start_read()
+        self.start_hdf5_write()
         self.start_write()
         self.shut_down()
         self.print_stats()
