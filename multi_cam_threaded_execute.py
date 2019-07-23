@@ -5,6 +5,7 @@ Created on Mon Jun  3 12:49:03 2019
 
 @author: abuzarmahmood
 """
+
 from multi_cam_threaded import webcam_recording
 import pylab as plt
 import numpy as np
@@ -13,6 +14,8 @@ import sys
 import os
 
 folder_name = os.getcwd()
+
+#file_name = 'test_' + \
 file_name = sys.argv[1]+ '_' + \
             datetime.datetime.today().\
             strftime('%y%m%d-%H%M%S')
@@ -22,7 +25,7 @@ if not os.path.exists(fin_direc):
     os.mkdir(fin_direc)
 #this_recording = webcam_recording(10,30,2, resolution = (1280,720))
 this_recording = webcam_recording(
-                                duration = 20*60,
+                                duration = 60,
                                 frame_rate = 30,
                                 cam_num = 2,
                                 file_name = fin_direc + '/' + file_name) 
