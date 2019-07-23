@@ -11,12 +11,10 @@ import numpy as np
 import tables
 import time
 import cv2
-import pylab as plt
 import threading
 import os
 import re
 import glob
-import tqdm
 import warnings
 import multiprocessing as mp
 
@@ -126,58 +124,6 @@ class webcam_recording:
                     out_file.write(str(self.time_list[-1]) + '\n')        
                 self.time_bool = 0
 
-    # Finds list of available binary files
-    @staticmethod
-    def list_binary_files(directory):
-        file_list = [os.path.basename(x) for x in glob.glob(directory + '/*.npy')]
-        #file_dict = dict((cam,[]) for cam in range(cam_num))
-        #for file in file_list:
-        #    file_dict[int(file[file.find('cam')+3])].append(file)
-        cam_list = [int(file[file.find('cam')+3]) for file in file_list]
-        return list(zip(file_list,cam_list))
-
-        
-    # Load binary images into hdf5
-    def bin2img(self):
-        for cam in range(self.cam_num):
-            os.makedirs(os.path.dirname(self.file_name) + '/images/cam{0}'.format(cam))
-        self.img_count = 0
-        pbar = tqdm.tqdm(total = self.total_frames)
-        while self.img_count < sum(self.out_count):
-            file_list = self.list_binary_files(os.path.dirname(self.file_name) + '/temp')
-            if len(file_list) > 0:
-                for file in file_list:
-                    temp_img = np.load(os.path.dirname(self.file_name) + '/temp/' + file[0])
-                    retval = cv2.imwrite(os.path.dirname(self.file_name) + \
-                            '/images/cam{0}'.format(file[1]) + \
-                            '/' + file[0].split('.')[0] + '.ppm',temp_img)
-                    if retval:
-                        os.remove(os.path.dirname(self.file_name) + '/temp/'+file[0])
-                        self.img_count += 1
-                    pbar.update(1/self.cam_num)
-            else:
-                pass
-        print('{0} / {1} images successfully converted'.\
-                format(self.img_count/self.cam_num,self.total_frames))
-        pbar.close()
-
-    def img2vid(self):
-        #with open('convert_file.sh','w') as file:
-        for cam in range(self.cam_num):
-            cmd = str("ffmpeg -f image2 -r {0} -s {1}x{2} " 
-                    "-i {3}_cam{4}_%06d.ppm -b:v {5} {6} \n".format(
-                            self.frame_rate,
-                            self.resolution[0],
-                            self.resolution[1],
-                            os.path.dirname(self.file_name) + '/images/cam{}/'.format(cam)\
-                                    + os.path.basename(self.file_name),
-                            cam,
-                            '10000k',
-                            self.file_name + '_cam' + str(cam) + '.avi'
-                            ))
-                #file.write(cmd)
-            exit_flag = os.system(cmd)
-            print('Exit flag : {}'.format(exit_flag))
 
     def print_stats(self):
         print(
@@ -207,16 +153,6 @@ class webcam_recording:
         t.join()
         return self
     
-    def start_bin2img(self):
-        t = threading.Thread(
-                target = self.bin2img, 
-                name='bin2img_thread', 
-                args=())
-        t.start()
-        print('Converting binaries to images now')
-        t.join()
-        return self
-
     def start_recording(self):
         self.getDevices()
         self.initialize_cameras()
@@ -228,6 +164,4 @@ class webcam_recording:
                 self.start_write()
                 start_write_bool = 1
         
-        #self.bin2img()
-        #self.img2vid()
         self.print_stats()
