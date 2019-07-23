@@ -46,7 +46,7 @@ def get_name(directory):
 # Convert binary files to archive (Get compressed more than images)
 def compress_7z(directory):
     os.system("7za a {0}/{1}_archive.7z {2}/*".format(
-        os.dirname(directory),
+        os.path.dirname(directory),
         get_name(directory),
         directory))
 
@@ -117,7 +117,7 @@ def img2vid(directory,
                         + basename,
                         cam,
                         '10000k',
-                        basename + '_cam' + str(cam) + '.avi'
+                        os.path.dirname(directory) + '/' + basename + '_cam' + str(cam) + '.avi'
                         ))
             #file.write(cmd)
         exit_flag = os.system(cmd)
