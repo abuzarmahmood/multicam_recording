@@ -83,9 +83,6 @@ class webcam_recording:
         for cam in self.all_cams:
             cam.stop()
         
-        #for writer in self.all_writers:
-        #    writer.release()
-            
     def read_frames(self):
         for count in range(self.total_frames):
             if min(self.in_count) > self.moving_window:
@@ -106,7 +103,7 @@ class webcam_recording:
 
 
     # To write out to binary files
-    def write_images(self):
+    def write_binary(self):
         os.mkdir(os.path.dirname(self.file_name) + '/temp')
         while self.write_bool > 0 or self.read_bool > 0:
             time.sleep(0.5/self.frame_rate)
@@ -141,34 +138,28 @@ class webcam_recording:
 
         
     # Load binary images into hdf5
-    def bin2hf5(self):
-        self.hf5 = self.initialize_hdf5(self.file_name,self.cam_num)
-        self.hf5_count = 0
+    def bin2img(self):
+        for cam in range(self.cam_num):
+            os.makedirs(os.path.dirname(self.file_name) + '/images/cam{0}'.format(cam))
+        self.img_count = 0
         pbar = tqdm.tqdm(total = self.total_frames)
-        while self.hf5_count < sum(self.out_count):
-            time.sleep(2/self.frame_rate)
+        while self.img_count < sum(self.out_count):
             file_list = self.list_binary_files(os.path.dirname(self.file_name) + '/temp')
             if len(file_list) > 0:
                 for file in file_list:
                     temp_img = np.load(os.path.dirname(self.file_name) + '/temp/' + file[0])
-                    self.hf5.create_array('/cam{0}'.format(file[1]),\
-                            file[0].split('.')[0],temp_img)
-                    self.hf5.flush()
-                    self.hf5_count += 1
-                    os.remove(os.path.dirname(self.file_name) + '/temp/'+file[0])
+                    retval = cv2.imwrite(os.path.dirname(self.file_name) + \
+                            '/images/cam{0}'.format(file[1]) + \
+                            '/' + file[0].split('.')[0] + '.ppm',temp_img)
+                    if retval:
+                        os.remove(os.path.dirname(self.file_name) + '/temp/'+file[0])
+                        self.img_count += 1
                     pbar.update(1/self.cam_num)
             else:
                 pass
-        self.hf5.close()
+        print('{0} / {1} images successfully converted'.\
+                format(self.img_count/self.cam_num,self.total_frames))
         pbar.close()
-
-    @staticmethod
-    def initialize_hdf5(file_name,cam_num):
-        hf5 = tables.open_file(file_name + '.h5', mode = 'w')
-        for cam in range(cam_num):
-            hf5.create_group('/','cam{0}'.format(cam))
-        return hf5
-
 
     def print_stats(self):
         print(
@@ -179,12 +170,6 @@ class webcam_recording:
                   ))
                      
     def start_read(self):
-        #p = Process(
-        #        target = self.write_images,
-        #        name='read_thread', 
-        #        args = ())
-        #p.start()
-        #############################
         t = threading.Thread(
                 target = self.read_frames, 
                 name='read_thread', 
@@ -195,16 +180,8 @@ class webcam_recording:
         return self
     
     def start_write(self):
-
-        #p = Process(
-        #        target = self.write_images,
-        #        name='print_thread', 
-        #        args = ())
-        #p.start()
-        #p.join()
-        #############################
         t = threading.Thread(
-                target = self.write_images, 
+                target = self.write_binary, 
                 name='print_thread', 
                 args=())
         t.start()
@@ -212,21 +189,14 @@ class webcam_recording:
         t.join()
         return self
     
-    def start_hdf5_write(self):
-        #t = threading.Thread(
-        #        target = self.bin2hf5,
-        #        name = 'hf5_thread',
-        #        args = ())
-        #t.start()
-        #t.join()
-        ############################
-        #mp.set_start_method('spawn')
-        p = mp.Process(
-                target = self.bin2hf5,
-                args = ())
-        p.start()
-        print('Writing to HDF5 now')
-        p.join()
+    def start_bin2img(self):
+        t = threading.Thread(
+                target = self.bin2img, 
+                name='bin2img_thread', 
+                args=())
+        t.start()
+        print('Converting binaries to images now')
+        t.join()
         return self
 
     def start_recording(self):
@@ -240,6 +210,6 @@ class webcam_recording:
                 self.start_write()
                 start_write_bool = 1
         
-        self.start_hdf5_write()
+        self.start_bin2img()
         self.shut_down()
         self.print_stats()
