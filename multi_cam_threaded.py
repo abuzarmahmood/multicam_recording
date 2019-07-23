@@ -161,6 +161,24 @@ class webcam_recording:
                 format(self.img_count/self.cam_num,self.total_frames))
         pbar.close()
 
+    def img2vid(self):
+        #with open('convert_file.sh','w') as file:
+        for cam in range(self.cam_num):
+            cmd = str("ffmpeg -f image2 -r {0} -s {1}x{2} " 
+                    "-i {3}_cam{4}_%06d.ppm -b:v {5} {6} \n".format(
+                            self.frame_rate,
+                            self.resolution[0],
+                            self.resolution[1],
+                            os.path.dirname(self.file_name) + '/images/cam{}/'.format(cam)\
+                                    + os.path.basename(self.file_name),
+                            cam,
+                            '10000k',
+                            self.file_name + '_cam' + str(cam) + '.avi'
+                            ))
+                #file.write(cmd)
+            exit_flag = os.system(cmd)
+            print('Exit flag : {}'.format(exit_flag))
+
     def print_stats(self):
         print(
                 'Frame lag = {0}, Avg FR = {1}, , Total time = {2}'.format(
@@ -174,7 +192,7 @@ class webcam_recording:
                 target = self.read_frames, 
                 name='read_thread', 
                 args=())
-        t.daemon = True
+        #t.daemon = True
         t.start()
         print('Reading frames now')
         return self
@@ -210,6 +228,6 @@ class webcam_recording:
                 self.start_write()
                 start_write_bool = 1
         
-        self.start_bin2img()
-        self.shut_down()
+        #self.bin2img()
+        #self.img2vid()
         self.print_stats()
