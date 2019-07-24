@@ -99,18 +99,23 @@ class webcam_recording:
             self.time_bool = 1        
         self.read_bool = 0
 
+    
+    # Pre-define all names for files
+    def generate_name_list(self):
+        self.name_list = [[os.path.dirname(self.file_name) + "/temp/{0}_cam{2}_{1:06d}".\
+                format(os.path.basename(self.file_name),frame,cam) \
+                for frame in range(self.total_frames)] for cam in range(self.cam_num)] 
 
     # To write out to binary files
     def write_binary(self):
+        self.generate_name_list()
         os.mkdir(os.path.dirname(self.file_name) + '/temp')
         while self.write_bool > 0 or self.read_bool > 0:
             time.sleep(0.5/self.frame_rate)
             for cam in range(self.cam_num):
-                if len(self.all_buffers[cam]) > 0 and self.buffer_bool == 1:
-                    np.save(os.path.dirname(self.file_name) + '/temp/{0}_cam{2}_{1:06d}'.\
-                            format(os.path.basename(self.file_name),self.out_count[cam],cam),
+                if len(self.all_buffers[cam]) > 0 :#and self.buffer_bool == 1:
+                    np.save(self.name_list[cam][self.out_count[cam]],
                             self.all_buffers[cam][0])
-                    #self.all_writers[cam].write(self.all_buffers[cam][0])
                     self.all_buffers[cam].pop(0)
                     self.out_count[cam] += 1
              
