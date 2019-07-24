@@ -138,7 +138,7 @@ class webcam_recording:
                 target = self.read_frames, 
                 name='read_thread', 
                 args=())
-        #t.daemon = True
+        t.daemon = True
         t.start()
         print('Reading frames now')
         return self
