@@ -25,7 +25,7 @@ if not os.path.exists(fin_direc):
     os.mkdir(fin_direc)
 #this_recording = webcam_recording(10,30,2, resolution = (1280,720))
 this_recording = webcam_recording(
-                                duration = 60,
+                                duration = 60*3,
                                 frame_rate = 30,
                                 cam_num = 2,
                                 file_name = fin_direc + '/' + file_name) 

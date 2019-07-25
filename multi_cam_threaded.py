@@ -90,7 +90,17 @@ class webcam_recording:
         for thread in self.write_pool:
             thread.join()
 
-
+    def earray_generator(self,id):
+        test_img = self.all_cams[0].read()
+        hf5_path = os.path.dirname(self.file_name) + "/cam{}_frames.h5".format(id)
+        hf5 = tables.open_file(hf5_path, mode = 'w')
+        filters = tables.Filters(complevel=5, complib='blosc')
+        data_storage = hf5.create_earray('/','data',
+            tables.Atom.from_dtype(test_img.dtype),
+            shape = (0, test_img.shape[0], test_img.shape[1], test_img.shape[2]),
+            filters = filters,
+            expectedrows = self.total_frames)
+        return data_storage
     
     def write_setup(self):
         os.mkdir(os.path.dirname(self.file_name) + '/temp')
@@ -98,8 +108,7 @@ class webcam_recording:
         self.input_q = [queue.Queue() for cam in range(self.cam_num)]
         self.write_pool = [write_thread(
                                 self.input_q[cam], 
-                                os.path.dirname(self.file_name) + "/temp",
-                                "{0}_cam{1}".format(os.path.basename(self.file_name),cam),
+                                self.earray_generator(cam),
                                 0.5/self.frame_rate) for cam in range(self.cam_num)]
         for thread in self.write_pool:
             thread.start()
@@ -134,24 +143,19 @@ class webcam_recording:
 
 class write_thread(threading.Thread):
 
-    def __init__(self, input_q, directory, file_name, frame_rate):
+    def __init__(self, input_q, earray_handle, frame_rate):
         super(write_thread, self).__init__()
         self.stoprequest = threading.Event()
         
         self.input_q = input_q
-        self.file_name = file_name
-        self.directory = directory
+        self.earray_handle = earray_handle
         self.frame_rate = frame_rate
 
     def run(self):
-        self.out_count = 0  
-        with open(self.directory + '/' + self.file_name + \
-                '_{}'.format(self.out_count),'ba') as f:
             while not self.stoprequest.isSet():
                 try:
                     img = self.input_q.get(True, 1/self.frame_rate)
-                    np.save(f,img)
-                    self.out_count += 1
+                    self.earray_handle.append(img[None])
                 except:
                     continue
 
