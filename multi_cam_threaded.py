@@ -88,17 +88,16 @@ class webcam_recording:
             for cam in range(self.cam_num):
                 self.input_q[cam].put(self.all_cams[cam].read())
                 self.in_count[cam] += 1
-            self.text_q.put(time.time())
+            self.time_list.append(time.time())
+            self.text_q.put(self.time_list[-1])
         
         for thread in self.write_pool:
             thread.join()
         self.text_thread.join()
 
-        self.text_file.close()
-
     def earray_generator(self,id):
         test_img = self.all_cams[0].read()
-        hf5_path = os.path.dirname(self.file_name) + "/cam{}_frames.h5".format(id)
+        hf5_path = self.file_name + "cam{}_frames.h5".format(id)
         hf5 = tables.open_file(hf5_path, mode = 'w')
         filters = tables.Filters(complevel=5, complib='blosc')
         data_storage = hf5.create_earray('/','data',
@@ -128,9 +127,10 @@ class webcam_recording:
 
     def print_stats(self):
         print(
-                'Frame lag = {0}, Avg FR = {1}, , Total time = {2}'.format(
-                  str(np.asarray(self.in_count) - np.asarray(self.out_count)),
-                  str(np.mean(np.diff(self.time_list[-self.moving_window:]))),
+                #'Frame lag = {0}, Avg FR = {1}, , Total time = {2}'.format(
+                'Avg FR = {0}, , Total time = {1}'.format(
+                  #str(np.asarray(self.in_count) - np.asarray(self.out_count)),
+                  str(np.mean(np.diff(self.time_list))),
                   str(self.time_list[-1] - self.time_list[0])
                   ))
                      
@@ -150,8 +150,7 @@ class webcam_recording:
         self.initialize_cameras()
         self.write_setup()
         self.start_read()
-
-        #self.print_stats()
+        self.print_stats()
 
 class text_thread(threading.Thread):
 
