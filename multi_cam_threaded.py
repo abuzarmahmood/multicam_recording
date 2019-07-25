@@ -15,8 +15,9 @@ import threading, queue
 import os
 import re
 import glob
-import warnings
 import multiprocessing as mp
+import datetime
+import tqdm
 
 
 class webcam_recording:
@@ -57,7 +58,8 @@ class webcam_recording:
         self.device_ids = temp_device_ids
 
     def initialize_cameras(self):
-        
+        print('Recording for : {}'\
+                .format(datetime.timedelta(seconds = self.duration)))        
         self.check_list = [self.testDevice(i) for i in self.device_ids[:self.cam_num]]
         if sum(self.check_list) == self.cam_num:
             self.all_cams = [VideoStream(src = i,
@@ -86,9 +88,13 @@ class webcam_recording:
             for cam in range(self.cam_num):
                 self.input_q[cam].put(self.all_cams[cam].read())
                 self.in_count[cam] += 1
-            self.time_list.append(time.time())
+            self.text_q.put(time.time())
+        
         for thread in self.write_pool:
             thread.join()
+        self.text_thread.join()
+
+        self.text_file.close()
 
     def earray_generator(self,id):
         test_img = self.all_cams[0].read()
@@ -103,7 +109,6 @@ class webcam_recording:
         return data_storage
     
     def write_setup(self):
-        os.mkdir(os.path.dirname(self.file_name) + '/temp')
         # Setup write worker threads
         self.input_q = [queue.Queue() for cam in range(self.cam_num)]
         self.write_pool = [write_thread(
@@ -113,6 +118,13 @@ class webcam_recording:
         for thread in self.write_pool:
             thread.start()
         print('Writing queues initialized')
+
+        self.text_q = queue.Queue()
+        self.text_thread = text_thread(self.text_q, self.file_name + '.txt', 
+                                        self.frame_rate, self.total_frames)
+        self.text_thread.start()
+        print('Text queue initialized')
+
 
     def print_stats(self):
         print(
@@ -140,6 +152,31 @@ class webcam_recording:
         self.start_read()
 
         #self.print_stats()
+
+class text_thread(threading.Thread):
+
+    def __init__(self, input_q, text_file_name , frame_rate, total_frames):
+        super(text_thread, self).__init__()
+        self.stoprequest = threading.Event()
+        
+        self.input_q = input_q
+        self.text_file_name = text_file_name
+        self.frame_rate = frame_rate
+        self.pbar = tqdm.tqdm(total = total_frames)
+
+    def run(self):
+            while not self.stoprequest.isSet():
+                try:
+                    this_time = self.input_q.get(True, 1/self.frame_rate)
+                    with open(self.text_file_name,'a') as f:
+                        f.write(str(this_time) + '\n')
+                    self.pbar.update(1)
+                except:
+                    continue
+
+    def join(self, timeout = None):
+        self.stoprequest.set()
+        super(text_thread, self).join(timeout)
 
 class write_thread(threading.Thread):
 
