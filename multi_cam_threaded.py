@@ -87,6 +87,9 @@ class webcam_recording:
                 self.input_q[cam].put(self.all_cams[cam].read())
                 self.in_count[cam] += 1
             self.time_list.append(time.time())
+        for thread in self.write_pool:
+            thread.join()
+
 
     
     def write_setup(self):
@@ -142,16 +145,15 @@ class write_thread(threading.Thread):
 
     def run(self):
         self.out_count = 0  
-        while not self.stoprequest.isSet():
-            try:
-                img = self.input_q.get(True, 1/self.frame_rate)
-                np.save(
-                        self.directory + '/' + self.file_name + '_{}'.format(self.out_count),
-                        img
-                        )
-                self.out_count += 1
-            except:
-                continue
+        with open(self.directory + '/' + self.file_name + \
+                '_{}'.format(self.out_count),'ba') as f:
+            while not self.stoprequest.isSet():
+                try:
+                    img = self.input_q.get(True, 1/self.frame_rate)
+                    np.save(f,img)
+                    self.out_count += 1
+                except:
+                    continue
 
     def join(self, timeout = None):
         self.stoprequest.set()
