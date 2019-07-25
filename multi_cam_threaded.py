@@ -11,21 +11,18 @@ import numpy as np
 import tables
 import time
 import cv2
-import threading
+import threading, queue
 import os
 import re
 import glob
 import warnings
 import multiprocessing as mp
 
+
 class webcam_recording:
     
     time_list = []
     moving_window = 100
-    read_bool = 1
-    write_bool = 1    
-    time_bool = 0
-    buffer_bool = 0
 
     def __init__(self,
                 duration,
@@ -42,8 +39,6 @@ class webcam_recording:
         self.resolution = resolution
         self.in_count = [0 for i in range(self.cam_num)]
         self.out_count = [0 for i in range(self.cam_num)]
-
-        warnings.filterwarnings('ignore', category=tables.NaturalNameWarning)
 
              
     @staticmethod
@@ -68,7 +63,6 @@ class webcam_recording:
             self.all_cams = [VideoStream(src = i,
                                         resolution = self.resolution).start() \
                                                 for i in self.device_ids[:self.cam_num]]
-            self.all_buffers = [[] for i in range(self.cam_num)]
             print('Cameras initialized')
 
         else:
@@ -89,46 +83,24 @@ class webcam_recording:
             else:
                 next_rate = self.frame_rate
             time.sleep(1/next_rate)
-            #time.sleep(np.max([0,1/next_rate]))
-            self.buffer_bool = 0
             for cam in range(self.cam_num):
-                self.all_buffers[cam].append(self.all_cams[cam].read())
+                self.input_q[cam].put(self.all_cams[cam].read())
                 self.in_count[cam] += 1
-            self.buffer_bool = 1
             self.time_list.append(time.time())
-            self.time_bool = 1        
-        self.read_bool = 0
 
     
-    # Pre-define all names for files
-    def generate_name_list(self):
-        self.name_list = [[os.path.dirname(self.file_name) + "/temp/{0}_cam{2}_{1:06d}".\
-                format(os.path.basename(self.file_name),frame,cam) \
-                for frame in range(self.total_frames)] for cam in range(self.cam_num)] 
-
-    # To write out to binary files
-    def write_binary(self):
-        self.generate_name_list()
+    def write_setup(self):
         os.mkdir(os.path.dirname(self.file_name) + '/temp')
-        while self.write_bool > 0 or self.read_bool > 0:
-            time.sleep(0.5/self.frame_rate)
-            for cam in range(self.cam_num):
-                if len(self.all_buffers[cam]) > 0 :#and self.buffer_bool == 1:
-                    np.save(self.name_list[cam][self.out_count[cam]],
-                            self.all_buffers[cam][0])
-                    self.all_buffers[cam].pop(0)
-                    self.out_count[cam] += 1
-             
-            self.write_bool = \
-                sum([out_count < in_count for (out_count, in_count) in \
-                     zip(self.out_count, self.in_count)])
-            
-            if self.time_bool == 1:
-                with open("{0}_time_list.txt".format(self.file_name),"a") \
-                        as out_file:
-                    out_file.write(str(self.time_list[-1]) + '\n')        
-                self.time_bool = 0
-
+        # Setup write worker threads
+        self.input_q = [queue.Queue() for cam in range(self.cam_num)]
+        self.write_pool = [write_thread(
+                                self.input_q[cam], 
+                                os.path.dirname(self.file_name) + "/temp",
+                                "{0}_cam{1}".format(os.path.basename(self.file_name),cam),
+                                0.5/self.frame_rate) for cam in range(self.cam_num)]
+        for thread in self.write_pool:
+            thread.start()
+        print('Writing queues initialized')
 
     def print_stats(self):
         print(
@@ -143,30 +115,45 @@ class webcam_recording:
                 target = self.read_frames, 
                 name='read_thread', 
                 args=())
-        t.daemon = True
+        #t.daemon = True
         t.start()
         print('Reading frames now')
-        return self
-    
-    def start_write(self):
-        t = threading.Thread(
-                target = self.write_binary, 
-                name='print_thread', 
-                args=())
-        t.start()
-        print('Writing frames now')
         t.join()
         return self
     
     def start_recording(self):
         self.getDevices()
         self.initialize_cameras()
+        self.write_setup()
         self.start_read()
 
-        start_write_bool = 0
-        while not start_write_bool: 
-            if sum(self.in_count) > 0:
-                self.start_write()
-                start_write_bool = 1
+        #self.print_stats()
+
+class write_thread(threading.Thread):
+
+    def __init__(self, input_q, directory, file_name, frame_rate):
+        super(write_thread, self).__init__()
+        self.stoprequest = threading.Event()
         
-        self.print_stats()
+        self.input_q = input_q
+        self.file_name = file_name
+        self.directory = directory
+        self.frame_rate = frame_rate
+
+    def run(self):
+        self.out_count = 0  
+        while not self.stoprequest.isSet():
+            try:
+                img = self.input_q.get(True, 1/self.frame_rate)
+                np.save(
+                        self.directory + '/' + self.file_name + '_{}'.format(self.out_count),
+                        img
+                        )
+                self.out_count += 1
+            except:
+                continue
+
+    def join(self, timeout = None):
+        self.stoprequest.set()
+        super(write_thread, self).join(timeout)
+
