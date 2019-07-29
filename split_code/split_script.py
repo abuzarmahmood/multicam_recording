@@ -7,18 +7,22 @@ import re
 import numpy as np
 import pylab as plt
 from tqdm import tqdm
-
+import os
 # Initialize filenames
 
-directory = '/media/bigdata/blech_codes/vid_recordings/BS46_Extra_190618-110823'
-video_files = glob.glob( directory + '/**/*.avi', recursive=True)
-framelist_file = glob.glob( directory + '/**/*framelist*', recursive=True)[0]
+#directory = '/media/bigdata/blech_codes/vid_recordings/BS46_Extra_190618-110823'
+#directory = '/media/bigdata/blech_codes/vid_recordings/BS49_4tastes_190617-151511'
+directory = os.getcwd()
+#video_files = glob.glob( directory + '/**/*.avi', recursive=True)
+video_files = glob.glob( directory + '/**/*out*', recursive=True)
+#framelist_file = glob.glob( directory + '/**/*framelist*', recursive=True)[0]
+marker_file = glob.glob(directory + '/**/*markers*', recursive = True)[0]
 trial_list_file = glob.glob( directory + '/**/*trial_timelist*', recursive=True)[0]
 
 # Initialize Paramteres
 frame_rate = 30.0
 # Define how much before and after the trial we want
-t_prior = 2
+t_prior = 5
 t_post = 5
 
 # Assuming uniform frame rate, how many frames would this be
@@ -35,19 +39,25 @@ def read_timelist(filename):
     return timelist
 
 # Load list files
-frame_list = read_timelist(framelist_file)
+#frame_list = read_timelist(framelist_file)
+marker_list = read_timelist(marker_file)
 trial_list = read_timelist(trial_list_file)
 
-# Find frames in frame_list to every trial
-frame_inds = [np.argmin((np.asarray(frame_list) - trial_time)**2) for \
-                trial_time in trial_list] 
+# Get total number of frames from file
+cam = 0
+video_name = video_files[cam]
+cap = cv2.VideoCapture(video_name)
+del cap
+frame_count = cap.get(7)
+frame_times = np.linspace(marker_list[0],marker_list[1],frame_count)
+frame_inds = [np.argmin(np.abs(trial - frame_times)) for trial in trial_list]
 
 # Make a list of tuples to describe start and stop points for every video
 split_markers = [(trial-t_prior_frames,trial+t_post_frames) for trial in frame_inds] 
 
 import dill
 ## Save dill session
-dill_filename = '/media/bigdata/blech_codes/vid_recordings/BS46_Extra_190618-110823' + '/' + 'dill_session.pkl'
+dill_filename = directory + '/' + 'dill_session.pkl'
 #dill.dump_session(dill_filename)
 
 ## Load dill session
@@ -55,12 +65,12 @@ dill.load_session(dill_filename)
 
 
 # CHOP CHOP
-cam = 0
 
+cam = 0
 for trial_num in tqdm(range(len(split_markers))):
+    trial = split_markers[trial_num]
     video_name = video_files[cam]
     cap = cv2.VideoCapture(video_name)
-    trial = split_markers[trial_num]
     cap.set(1,trial[0])
     frame_count = trial[0]
     saved_frame_count = 0
@@ -78,12 +88,12 @@ for trial_num in tqdm(range(len(split_markers))):
     cap.release()
     
     # Write out the list of frames at the appropriate framerate
-    resolution = frame_list[0].shape[:2]
+    resolution = (frame_list[0].shape[1],frame_list[0].shape[0])
     output_name = directory + '/' + 'trial{}_cam{}.avi'.format(trial_num,cam)
     writer = cv2.VideoWriter(output_name,
                            cv2.VideoWriter_fourcc(*'XVID'), 
                            frame_rate, 
-                           (640,480)) 
+                           resolution) 
     
     for frame in frame_list:
         writer.write(frame)
