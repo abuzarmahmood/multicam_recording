@@ -25,7 +25,5 @@ exec_string=${exec_string/frames/$frames}
 
 echo "Start time : $(date)"
 date +%s.%N | cut -b-14 > $time_file0
-#date > $time_file0
 eval $exec_string
-#date >> $time_file0
 date +%s.%N | cut -b-14 >> $time_file0
