@@ -1,9 +1,16 @@
+"""
+Script to split video files according to trial times
+For usage, type python split_script.py -h
+"""
+
 # ___       _ _   _       _ _         
 #|_ _|_ __ (_) |_(_) __ _| (_)_______ 
 # | || '_ \| | __| |/ _` | | |_  / _ \
 # | || | | | | |_| | (_| | | |/ /  __/
 #|___|_| |_|_|\__|_|\__,_|_|_/___\___|
 #                                     
+
+# Collect filenames to be used for processing
 
 import argparse
 
@@ -43,6 +50,9 @@ import os
 # Define functions to be used
 
 def get_total_frames(filename):
+    """
+    Uses CV2 VideoCapture modules to extract frame count from video file
+    """
     return cv2.VideoCapture(filename).get(7)
 
 def read_timelist(filename):
@@ -94,6 +104,7 @@ split_markers_list = [[(trial-t_prior_frames,trial+t_post_frames) \
 # \____|_| |_|\___/|_|      \____|_| |_|\___/|_|    
 #                                                   
 
+# Open video file, extract frames bookending a delivery and write to new video
 for video_num in range(len(video_files)):
     for trial_num in tqdm(range(len(split_markers_list[video_num]))):
         trial = split_markers_list[video_num][trial_num]
