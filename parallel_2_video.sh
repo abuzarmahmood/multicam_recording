@@ -8,7 +8,7 @@ Outputs:
 -Marker text file (start and stop times for recording)
 '
 # Initialize name template
-name_template=name_time
+name_template=name_video_time
 # Request name and collect time
 echo -n "Enter name: "
 read name
