@@ -16,13 +16,11 @@ time=$(date +%g%m%d-%H%M%S)
 # Generate final name using input name and time
 fin_name=${name_template/name/$name}
 fin_name=${fin_name/time/$time}
-echo $fin_name
+echo "File name : $fin_name"
 
-# Request duration of video recording and calculate total frames
-echo -n "Enter duration (in minutes) : "
-read duration
+# Duration set to very large number, script is killed to stop recording
+duration=180
 frames=$(expr 30 \* 60 \* $duration)
-echo $frames
 
 # Make directory to store everything using final name
 mkdir $fin_name
@@ -36,8 +34,14 @@ time_file=${time_file/name/$fin_name}
 exec_string=${exec_string/name/$fin_name}
 exec_string=${exec_string/frames/$frames}
 
+figlet "ctrl+c to stop"
+
 # Write start and stop time and execute video recording
 echo "Start time : $(date)"
+echo
+
 date +%s.%N | cut -b-14 > $time_file
 eval $exec_string
+echo "Stop time : $(date)"
+echo
 date +%s.%N | cut -b-14 >> $time_file
