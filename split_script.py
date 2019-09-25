@@ -56,21 +56,14 @@ import numpy as np
 import pylab as plt
 from tqdm import tqdm
 import os
-from split_funcs import *
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 
-# ____        __ _              _____                     
-#|  _ \  ___ / _(_)_ __   ___  |  ___|   _ _ __   ___ ___ 
-#| | | |/ _ \ |_| | '_ \ / _ \ | |_ | | | | '_ \ / __/ __|
-#| |_| |  __/  _| | | | |  __/ |  _|| |_| | | | | (__\__ \
-#|____/ \___|_| |_|_| |_|\___| |_|   \__,_|_| |_|\___|___/
-                                                         
-
-def get_total_frames(filename):
-    """
-    Uses CV2 VideoCapture modules to extract frame count from video file
-    """
-    return cv2.VideoCapture(filename).get(7)
+# ____       _               
+#/ ___|  ___| |_ _   _ _ __  
+#\___ \ / _ \ __| | | | '_ \ 
+# ___) |  __/ |_| |_| | |_) |
+#|____/ \___|\__|\__,_| .__/ 
+#                     |_|    
 
 def read_timelist(filename):
     """
@@ -80,49 +73,6 @@ def read_timelist(filename):
         timelist = [float(line) for line in file]
     return timelist
 
-def calculate_frame_inds(marker_list, frame_count_list, trial_list):
-    """
-    Finds index of frames closest to trial markers
-    """
-    # Assuming every frame is evenly spaced, infer time for every frame
-    frame_times_list = [np.linspace(marker_list[0],marker_list[1],frame_count)\
-            for frame_count in frame_count_list]
-
-    # Find closest frame to marker for every trial
-    frame_inds_list = [[np.argmin(np.abs(trial - frame_times)) for trial in trial_list]\
-                    for frame_times in frame_times_list]
-
-    return frame_inds_list
-
-def calculate_split_markers(frame_inds_list, prior_post_tuple, trial_bool):
-    """
-    function to calculation split markers to chop file by
-    For trials, gives index of frames before and after start of trial
-    For affective, simply returns index of start and end
-    """
-    # From frames closest to trial start time, find frames bounding
-    # a pre-defined period before and after
-    if trial_bool:
-        t_prior_frames = prior_post_tuple[0]
-        t_post_frames = prior_post_tuple[1]
-        # Make a list of tuples to describe start and stop points for every video
-        split_markers_list = [[(trial-t_prior_frames,trial+t_post_frames) \
-                for trial in frame_inds] \
-                for frame_inds in frame_inds_list]
-
-    # If not trials, just big chunk of video, return as is
-    # This is to keep execution flow the same for all video
-    else:
-        split_markers_list = [frame_inds_list]
-
-    return split_markers_list
-# ____       _               
-#/ ___|  ___| |_ _   _ _ __  
-#\___ \ / _ \ __| | | | '_ \ 
-# ___) |  __/ |_| |_| | |_) |
-#|____/ \___|\__|\__,_| .__/ 
-#                     |_|    
-
 # Initialize filenames
 
 video_files = args.video_file
@@ -131,8 +81,8 @@ triallist_file = args.triallist_file
 directory = os.path.dirname(os.path.abspath(marker_file))
 
 # Load list files
-marker_list = read_timelist(marker_file)
-trial_list = read_timelist(triallist_file)
+marker_vec = np.asarray(read_timelist(marker_file))
+trial_vec = np.asarray(read_timelist(triallist_file))
 
 # Initialize Paramteres
 frame_rate = 30.0
@@ -140,22 +90,15 @@ frame_rate = 30.0
 t_prior = 5
 t_post = 5
 
-# Assuming uniform frame rate, how many frames would this be
-t_prior_frames = np.ceil(t_prior * frame_rate).astype('int')
-t_post_frames = np.ceil(t_post * frame_rate).astype('int')
+# Convert trial markers to time from start of video
+trial_times = trial_vec - marker_vec[0]
 
-# Get total number of frames from file
-frame_count_list = [get_total_frames(file) for file in video_files]
-
-# Find frames closest to markers
-frame_inds_list = calculate_frame_inds(marker_list, frame_count_list, trial_list)
-split_markers_list= calculate_split_markers(frame_inds_list,
-        (t_prior_frames,t_post_frames), trial_bool)
-
-# Convert inds to times 
-split_times_list = [ [(trials[0]/frame_rate,trials[1]/frame_rate) \
-        for trials in video ]\
-        for video in split_markers_list]
+# If tastes, return array with times before and after trial
+# If affective, simply return start and end times as denoted by marker file
+if trial_bool:
+    split_times = np.asarray([trial_times-t_prior,trial_times+t_post])
+else:
+    split_times = trial_times[:,np.newaxis]
 
 #  ____ _   _  ___  ____     ____ _   _  ___  ____  
 # / ___| | | |/ _ \|  _ \   / ___| | | |/ _ \|  _ \ 
@@ -166,10 +109,10 @@ split_times_list = [ [(trials[0]/frame_rate,trials[1]/frame_rate) \
 
 # Open video file, extract frames bookending a delivery and write to new video
 for video_num in range(len(video_files)):
-    for trial_num in tqdm(range(len(split_markers_list[video_num]))):
+    for trial_num in tqdm(range(split_times.shape[1])):
 
         # Open file to be split
-        trial = split_times_list[video_num][trial_num]
+        trial = split_times[:,trial_num]
         video_name = video_files[video_num]
 
         # Write out the list of frames at the appropriate framerate
