@@ -57,7 +57,65 @@ import pylab as plt
 from tqdm import tqdm
 import os
 from split_funcs import *
+from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 
+# ____        __ _              _____                     
+#|  _ \  ___ / _(_)_ __   ___  |  ___|   _ _ __   ___ ___ 
+#| | | |/ _ \ |_| | '_ \ / _ \ | |_ | | | | '_ \ / __/ __|
+#| |_| |  __/  _| | | | |  __/ |  _|| |_| | | | | (__\__ \
+#|____/ \___|_| |_|_| |_|\___| |_|   \__,_|_| |_|\___|___/
+                                                         
+
+def get_total_frames(filename):
+    """
+    Uses CV2 VideoCapture modules to extract frame count from video file
+    """
+    return cv2.VideoCapture(filename).get(7)
+
+def read_timelist(filename):
+    """
+    Define list reader
+    """
+    with open(filename,'r') as file:
+        timelist = [float(line) for line in file]
+    return timelist
+
+def calculate_frame_inds(marker_list, frame_count_list, trial_list):
+    """
+    Finds index of frames closest to trial markers
+    """
+    # Assuming every frame is evenly spaced, infer time for every frame
+    frame_times_list = [np.linspace(marker_list[0],marker_list[1],frame_count)\
+            for frame_count in frame_count_list]
+
+    # Find closest frame to marker for every trial
+    frame_inds_list = [[np.argmin(np.abs(trial - frame_times)) for trial in trial_list]\
+                    for frame_times in frame_times_list]
+
+    return frame_inds_list
+
+def calculate_split_markers(frame_inds_list, prior_post_tuple, trial_bool):
+    """
+    function to calculation split markers to chop file by
+    For trials, gives index of frames before and after start of trial
+    For affective, simply returns index of start and end
+    """
+    # From frames closest to trial start time, find frames bounding
+    # a pre-defined period before and after
+    if trial_bool:
+        t_prior_frames = prior_post_tuple[0]
+        t_post_frames = prior_post_tuple[1]
+        # Make a list of tuples to describe start and stop points for every video
+        split_markers_list = [[(trial-t_prior_frames,trial+t_post_frames) \
+                for trial in frame_inds] \
+                for frame_inds in frame_inds_list]
+
+    # If not trials, just big chunk of video, return as is
+    # This is to keep execution flow the same for all video
+    else:
+        split_markers_list = [frame_inds_list]
+
+    return split_markers_list
 # ____       _               
 #/ ___|  ___| |_ _   _ _ __  
 #\___ \ / _ \ __| | | | '_ \ 
@@ -91,8 +149,13 @@ frame_count_list = [get_total_frames(file) for file in video_files]
 
 # Find frames closest to markers
 frame_inds_list = calculate_frame_inds(marker_list, frame_count_list, trial_list)
-split_markers_list = calculate_split_markers(frame_inds_list,
+split_markers_list= calculate_split_markers(frame_inds_list,
         (t_prior_frames,t_post_frames), trial_bool)
+
+# Convert inds to times 
+split_times_list = [ [(trials[0]/frame_rate,trials[1]/frame_rate) \
+        for trials in video ]\
+        for video in split_markers_list]
 
 #  ____ _   _  ___  ____     ____ _   _  ___  ____  
 # / ___| | | |/ _ \|  _ \   / ___| | | |/ _ \|  _ \ 
@@ -106,47 +169,11 @@ for video_num in range(len(video_files)):
     for trial_num in tqdm(range(len(split_markers_list[video_num]))):
 
         # Open file to be split
-        trial = split_markers_list[video_num][trial_num]
+        trial = split_times_list[video_num][trial_num]
         video_name = video_files[video_num]
-        cap = cv2.VideoCapture(video_name)
-
-        # Initialize progress bar
-        pbar = tqdm(total = frame_count_list[video_num]) 
-
-        # Resolution width-first
-        #resolution = (frame_list[0].shape[1],frame_list[0].shape[0])
-        resolution = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                        int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
         # Write out the list of frames at the appropriate framerate
         output_name = directory + '/' + 'trial{}_cam{}.avi'.format(trial_num,video_num)
-        writer = cv2.VideoWriter(output_name,
-                               cv2.VideoWriter_fourcc(*'XVID'), 
-                               frame_rate, 
-                               resolution) 
 
-        cap.set(1,trial[0])
-        frame_count = trial[0]
-        saved_frame_count = 0
-        success = 1
-        frame_list = []
-        while success and saved_frame_count <= (trial[1]-trial[0]):
-            if frame_count <= trial[1] and frame_count >= trial[0]:
-                success, frame = cap.read()
-                writer.write(frame)
-                #frame_list.append(frame)
-                frame_count += 1 
-                saved_frame_count += 1
-
-                # Update progress bar
-                pbar.update(1)
-
-            else:
-                success, frame = cap.read()
-                frame_count += 1 
-                # Update progress bar
-                pbar.update(1)
-
-        pbar.close()
-        cap.release()
-        
+        # Feed parameters to ffmpeg_extract_subclip
+        ffmpeg_extract_subclip(video_name, trial[0], trial[1], targetname=output_name)
