@@ -30,7 +30,7 @@ print('Video files : {}'.format(args.video_file))
 # Check how the file needs to be cut
 while True:
     trial_bool = (input(\
-            "Enter 1 if taste trials, 0 if affective, and >=2 to exit: \n"))
+            "\nEnter 1 if taste trials, 0 if affective, and >=2 to exit: \n"))
     try:
         trial_bool = int(trial_bool)
         if trial_bool >=2:

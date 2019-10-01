@@ -12,7 +12,7 @@ Pipeline:
 1) parallel_2_video.sh
 |
 V
-2) ffmpeg_convert.sh
+2) convert_files_gui.sh
 |
 V
 3) split_script.py
@@ -22,5 +22,6 @@ V
 2) Convert output video files using ffmpeg
 	-This is to get rid of a bug which prevents counting the total number
 		of frames in the original video
+	-Compresses file to a smaller bitrate to save on space
 3) Split video according to a file marking the start and end of the videos
 	and another file marking the starting point of every trial
