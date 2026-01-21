@@ -19,20 +19,6 @@ sudo apt-get update
 sudo apt-get install ffmpeg streamer parallel zenity figlet
 ```
 
-#### CentOS/RHEL/Fedora:
-```bash
-sudo yum install ffmpeg streamer parallel zenity figlet
-# or for newer systems with dnf:
-sudo dnf install ffmpeg streamer parallel zenity figlet
-```
-
-#### macOS (using Homebrew):
-```bash
-brew install ffmpeg parallel
-# Note: streamer and zenity may not be available on macOS
-# Alternative solutions may be needed for camera recording and GUI
-```
-
 ### Python Dependencies
 
 Install the required Python packages using pip:
