@@ -91,6 +91,8 @@ V
 - Requires 2 cameras connected to /dev/video0 and /dev/video1
 - Press Ctrl+C to stop recording
 
+**Note:** Input device numbers are hardcoded and may not be correct, use `v4l2-ctl --list-devices` to adjust
+
 ### Step 2: Convert output video files using convert_files_gui.sh
 - This step uses ffmpeg to get rid of a bug which prevents counting the total number of frames in the original video
 - Compresses file to a smaller bitrate to save on space
@@ -113,3 +115,8 @@ V
 - streamer is used for camera recording and may not be available on all systems
 - zenity provides the GUI for file selection in the conversion step
 - ffmpeg is used extensively for video processing and conversion
+
+## Resources
+
+- https://tldp.org/HOWTO/Webcam-HOWTO/framegrabbers.html
+- https://linux.die.net/man/1/streamer
