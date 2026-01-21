@@ -3,7 +3,6 @@
 | |_) |  _|   / _ \ | | | | |\/| |  _|  
 |  _ <| |___ / ___ \| |_| | |  | | |___ 
 |_| \_\_____/_/   \_\____/|_|  |_|_____|
-                                        
 
 Code to record from 2 cameras simultaneously and split video into trials
 
