@@ -1,10 +1,5 @@
- ____  _____    _    ____  __  __ _____ 
-|  _ \| ____|  / \  |  _ \|  \/  | ____|
-| |_) |  _|   / _ \ | | | | |\/| |  _|  
-|  _ <| |___ / ___ \| |_| | |  | | |___ 
-|_| \_\_____/_/   \_\____/|_|  |_|_____|
 
-Code to record from 2 cameras simultaneously and split video into trials
+Code to record from 2+ cameras simultaneously and split video into trials
 
 ## Dependencies
 
@@ -73,7 +68,7 @@ V
 
 ### Step 1: Record video using parallel_2_video.sh
 - Supply filename for session, time and date automatically appended to name
-- Requires 2 cameras connected to /dev/video0 and /dev/video1
+- Requires 2+ cameras connected to /dev/video<123>
 - Press Ctrl+C to stop recording
 
 **Note:** Input device numbers are hardcoded and may not be correct, use `v4l2-ctl --list-devices` to adjust
