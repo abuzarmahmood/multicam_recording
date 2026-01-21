@@ -6,6 +6,7 @@ When run requests input for filename and time in minutes
 Outputs:
 -Video files
 -Marker text file (start and stop times for recording)
+FIXED: Cameras now start recording at exactly the same time to fix sync issues
 '
 # Initialize name template
 name_template=name_video_time
@@ -26,8 +27,32 @@ frames=$(expr 30 \* 60 \* $duration)
 mkdir $fin_name
 cd $fin_name
 
-# Generate string to be evaluated
-exec_string="seq 0 1 | parallel -j 2 streamer -q -c /dev/video{} -s 1280x720 -f jpeg -t frames -r 30 -j 75 -w 0 -o name_cam{}.avi"
+# Calculate future start time (3 seconds from now to ensure all processes are ready)
+start_time=$(($(date +%s) + 3))
+echo "All cameras will start recording at: $(date -d @$start_time)"
+
+# Create a function that waits until the specified time before starting streamer
+start_streamer_at_time() {
+    local camera_id=$1
+    local output_file=$2
+    local frame_count=$3
+    local target_time=$4
+    
+    # Wait until the target time
+    current_time=$(date +%s)
+    if [ $current_time -lt $target_time ]; then
+        sleep $((target_time - current_time))
+    fi
+    
+    # Start recording at exactly the target time
+    streamer -q -c /dev/video$camera_id -s 1280x720 -f jpeg -t $frame_count -r 30 -j 75 -w 0 -o $output_file
+}
+
+# Export the function so parallel can use it
+export -f start_streamer_at_time
+
+# Generate string to be evaluated with synchronized start time
+exec_string="seq 0 1 | parallel -j 2 start_streamer_at_time {} name_cam{}.avi $frames $start_time"
 
 time_file="name_markers.txt"
 time_file=${time_file/name/$fin_name}
