@@ -26,9 +26,9 @@ V
 3) Split video according to a file marking the start and end of the videos
 	and another file marking the starting point of every trial
 
-NEW: combine_videos.py
+NEW: combine_utils/
 4) Combine multiple videos into a single frame showing all videos simultaneously
-	- Use combine_videos_gui.sh for GUI interface or combine_videos.py for command line
+	- Use combine_utils/combine_videos_gui.sh for GUI interface or combine_utils/combine_videos.py for command line
 	- Supports various grid layouts (auto, 2x1, 1x2, 2x2, 3x1, 1x3)
 	- Adjustable quality settings and video scaling
 	- Uses ffmpeg for efficient video processing
