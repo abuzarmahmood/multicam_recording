@@ -44,12 +44,13 @@ echo -n "Record single channel (Y/luminance only) for better performance? (y/n):
 read single_channel
 
 # Generate string to be evaluated using ffmpeg for video recording
+# Uses -use_wallclock_as_timestamps 1 to save wall-clock timestamps in video files
 if [[ "$single_channel" =~ ^[Yy]$ ]]; then
     echo "Recording single channel (Y/luminance only) for better performance..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -s 1280x720 -r 30 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
+    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -f v4l2 -i {2} -s 1280x720 -r 30 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
 else
     echo "Recording full color video..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
+    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
 fi
 
 time_file="${fin_name}_markers.txt"
@@ -62,3 +63,15 @@ eval $exec_string
 
 # Stop recording with marker
 stop_recording "$time_file"
+
+# Extract timestamps from recorded video files
+echo "Extracting timestamps from video files..."
+for i in $(seq 0 $((NUM_CAMERAS - 1))); do
+    if [ -f "${fin_name}_cam${i}.mp4" ]; then
+        echo "Extracting timestamps from ${fin_name}_cam${i}.mp4..."
+        ffmpeg -i "${fin_name}_cam${i}.mp4" -f mkvtimestamp_v2 "${fin_name}_cam${i}_timestamps.txt"
+        echo "Timestamps saved to ${fin_name}_cam${i}_timestamps.txt"
+    fi
+done
+
+echo "Recording and timestamp extraction complete!"
