@@ -10,6 +10,9 @@ import tempfile
 import shutil
 from pathlib import Path
 
+# Get the parent directory path
+script_dir = Path(__file__).parent.parent
+
 def test_ffmpeg_wallclock_flag():
     """Test that ffmpeg supports the -use_wallclock_as_timestamps flag"""
     print("Testing ffmpeg wall-clock timestamp flag support...")
@@ -48,7 +51,7 @@ def test_script_syntax():
     """Test that the modified script has correct bash syntax"""
     print("Testing script syntax...")
     
-    script_path = Path(__file__).parent / 'parallel2video_ffmpeg.sh'
+    script_path = script_dir / 'parallel2video_ffmpeg.sh'
     
     try:
         result = subprocess.run(['bash', '-n', str(script_path)], capture_output=True, text=True)
@@ -66,7 +69,7 @@ def test_script_contains_wallclock_flag():
     """Test that the script contains the wall-clock timestamp flag"""
     print("Testing script contains wall-clock timestamp flag...")
     
-    script_path = Path(__file__).parent / 'parallel2video_ffmpeg.sh'
+    script_path = script_dir / 'parallel2video_ffmpeg.sh'
     
     try:
         with open(script_path, 'r') as f:
@@ -86,7 +89,7 @@ def test_script_contains_timestamp_extraction():
     """Test that the script contains timestamp extraction functionality"""
     print("Testing script contains timestamp extraction functionality...")
     
-    script_path = Path(__file__).parent / 'parallel2video_ffmpeg.sh'
+    script_path = script_dir / 'parallel2video_ffmpeg.sh'
     
     try:
         with open(script_path, 'r') as f:
