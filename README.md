@@ -52,14 +52,15 @@ pip install opencv-python numpy matplotlib tqdm moviepy
 
 4. Make the shell scripts executable:
 ```bash
-chmod +x parallel_2_video.sh
+chmod +x parallel2video_ffmpeg.sh
+chmod +x parallel2video_streamer.sh
 chmod +x convert_files_gui.sh
 chmod +x combine_utils/combine_videos_gui.sh
 ```
 
 ## Usage Pipeline
 
-1) parallel_2_video.sh
+1) parallel2video_ffmpeg.sh (or parallel2video_streamer.sh for legacy systems)
 |
 V
 2) convert_files_gui.sh
@@ -67,15 +68,23 @@ V
 V
 3) split_script.py
 
-### Step 1: Record video using parallel_2_video.sh
+### Step 1: Record video using parallel2video_ffmpeg.sh (Recommended)
 - Supply filename for session, time and date automatically appended to name
 - Requires 2+ cameras connected to /dev/video<123>
 - Press Ctrl+C to stop recording
+- Outputs MP4 files with H.264 encoding for better compatibility and quality
+- Uses ffmpeg for modern video processing
+
+### Alternative: parallel2video_streamer.sh (Legacy)
+- Uses the older streamer utility for backward compatibility
+- Outputs AVI files that may require conversion (handled in Step 2)
+- Use this if ffmpeg is not available or if you need to maintain compatibility with existing workflows
 
 **Note:** Input device numbers are hardcoded and may not be correct, use `v4l2-ctl --list-devices` to adjust
 
 ### Step 2: Convert output video files using convert_files_gui.sh
-- This step uses ffmpeg to get rid of a bug which prevents counting the total number of frames in the original video
+- When using parallel2video_streamer.sh: This step uses ffmpeg to get rid of a bug which prevents counting the total number of frames in the original AVI files
+- When using parallel2video_ffmpeg.sh: This step may be optional as the files are already in MP4 format, but can be used for further compression
 - Compresses file to a smaller bitrate to save on space
 - Provides a GUI interface to select files for conversion (requires zenity)
 
@@ -110,7 +119,8 @@ python3 combine_utils/combine_videos.py video1.avi video2.avi -o combined.mp4 --
 ## Notes
 
 - The scripts are designed for Linux systems
-- streamer is used for camera recording and may not be available on all systems
+- parallel2video_ffmpeg.sh uses ffmpeg for modern video processing (recommended)
+- parallel2video_streamer.sh uses the legacy streamer utility for backward compatibility
 - zenity provides the GUI for file selection in the conversion step
 - ffmpeg is used extensively for video processing and conversion
 

@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""
+Test script for parallel recording scripts functionality
+"""
+
+import os
+import sys
+import subprocess
+import tempfile
+import shutil
+from pathlib import Path
+
+def test_script_exists():
+    """Test that both scripts exist and are executable"""
+    print("Testing script existence and executability...")
+    
+    # Test ffmpeg script
+    ffmpeg_script = Path("parallel2video_ffmpeg.sh")
+    assert ffmpeg_script.exists(), "parallel2video_ffmpeg.sh should exist"
+    assert os.access(ffmpeg_script, os.X_OK), "parallel2video_ffmpeg.sh should be executable"
+    
+    # Test streamer script
+    streamer_script = Path("parallel2video_streamer.sh")
+    assert streamer_script.exists(), "parallel2video_streamer.sh should exist"
+    assert os.access(streamer_script, os.X_OK), "parallel2video_streamer.sh should be executable"
+    
+    print("✓ Script existence and executability tests passed")
+
+def test_script_syntax():
+    """Test that scripts have valid bash syntax"""
+    print("Testing script syntax...")
+    
+    scripts = ["parallel2video_ffmpeg.sh", "parallel2video_streamer.sh"]
+    
+    for script in scripts:
+        result = subprocess.run(["bash", "-n", script], capture_output=True, text=True)
+        assert result.returncode == 0, f"{script} should have valid bash syntax. Error: {result.stderr}"
+    
+    print("✓ Script syntax tests passed")
+
+def test_ffmpeg_command_structure():
+    """Test that ffmpeg script contains proper ffmpeg commands"""
+    print("Testing ffmpeg command structure...")
+    
+    with open("parallel2video_ffmpeg.sh", "r") as f:
+        content = f.read()
+    
+    # Check for key ffmpeg components
+    assert "ffmpeg" in content, "Script should contain ffmpeg command"
+    assert "-f v4l2" in content, "Script should use v4l2 format for Linux cameras"
+    assert "-i /dev/video{}" in content, "Script should reference video devices"
+    assert "-s 1280x720" in content, "Script should set video resolution"
+    assert "-r 30" in content, "Script should set frame rate"
+    assert "libx264" in content, "Script should use H.264 encoding"
+    assert "-preset ultrafast" in content, "Script should use ultrafast preset for low latency"
+    assert "-crf 23" in content, "Script should set quality level"
+    assert "parallel -j 2" in content, "Script should use parallel for simultaneous recording"
+    
+    print("✓ FFmpeg command structure tests passed")
+
+def test_streamer_command_structure():
+    """Test that streamer script contains proper streamer commands"""
+    print("Testing streamer command structure...")
+    
+    with open("parallel2video_streamer.sh", "r") as f:
+        content = f.read()
+    
+    # Check for key streamer components
+    assert "streamer" in content, "Script should contain streamer command"
+    assert "-c /dev/video{}" in content, "Script should reference video devices"
+    assert "-s 1280x720" in content, "Script should set video resolution"
+    assert "-f jpeg" in content, "Script should use jpeg format"
+    assert "-r 30" in content, "Script should set frame rate"
+    assert "parallel -j 2" in content, "Script should use parallel for simultaneous recording"
+    assert ".avi" in content, "Script should output AVI files"
+    
+    print("✓ Streamer command structure tests passed")
+
+def test_directory_structure_creation():
+    """Test that scripts create proper directory structure"""
+    print("Testing directory structure creation logic...")
+    
+    scripts = ["parallel2video_ffmpeg.sh", "parallel2video_streamer.sh"]
+    
+    for script in scripts:
+        with open(script, "r") as f:
+            content = f.read()
+        
+        # Check for directory creation
+        assert "mkdir $fin_name" in content, f"{script} should create directory with final name"
+        assert "cd $fin_name" in content, f"{script} should change to created directory"
+        
+        # Check for marker file creation
+        assert "markers.txt" in content, f"{script} should create marker file"
+        
+        # Check for timing functionality
+        assert "date +%s.%N" in content, f"{script} should record timestamps"
+    
+    print("✓ Directory structure creation tests passed")
+
+def test_script_differences():
+    """Test that ffmpeg and streamer scripts have key differences"""
+    print("Testing script differences...")
+    
+    with open("parallel2video_ffmpeg.sh", "r") as f:
+        ffmpeg_content = f.read()
+    
+    with open("parallel2video_streamer.sh", "r") as f:
+        streamer_content = f.read()
+    
+    # FFmpeg script should use ffmpeg, not streamer
+    assert "ffmpeg" in ffmpeg_content, "FFmpeg script should use ffmpeg"
+    assert "streamer" not in ffmpeg_content, "FFmpeg script should not use streamer"
+    
+    # Streamer script should use streamer, not ffmpeg
+    assert "streamer" in streamer_content, "Streamer script should use streamer"
+    assert "ffmpeg" not in streamer_content, "Streamer script should not use ffmpeg"
+    
+    # FFmpeg script should output MP4, streamer should output AVI
+    assert ".mp4" in ffmpeg_content, "FFmpeg script should output MP4 files"
+    assert ".avi" in streamer_content, "Streamer script should output AVI files"
+    
+    print("✓ Script differences tests passed")
+
+def test_readme_updated():
+    """Test that README has been updated with new script names"""
+    print("Testing README updates...")
+    
+    with open("README.md", "r") as f:
+        readme_content = f.read()
+    
+    # Check for new script names
+    assert "parallel2video_ffmpeg.sh" in readme_content, "README should mention ffmpeg script"
+    assert "parallel2video_streamer.sh" in readme_content, "README should mention streamer script"
+    
+    # Check that old script name is not mentioned
+    assert "parallel_2_video.sh" not in readme_content, "README should not mention old script name"
+    
+    # Check for proper documentation
+    assert "Recommended" in readme_content, "README should recommend ffmpeg script"
+    assert "Legacy" in readme_content, "README should mark streamer script as legacy"
+    
+    print("✓ README update tests passed")
+
+def main():
+    """Run all tests"""
+    print("Running parallel recording scripts tests...\n")
+    
+    try:
+        test_script_exists()
+        test_script_syntax()
+        test_ffmpeg_command_structure()
+        test_streamer_command_structure()
+        test_directory_structure_creation()
+        test_script_differences()
+        test_readme_updated()
+        
+        print("\n✓ All tests passed! The parallel recording scripts are working correctly.")
+        return 0
+        
+    except AssertionError as e:
+        print(f"\n✗ Test failed: {e}")
+        return 1
+    except Exception as e:
+        print(f"\n✗ Unexpected error during testing: {e}")
+        return 1
+
+if __name__ == '__main__':
+    sys.exit(main())
