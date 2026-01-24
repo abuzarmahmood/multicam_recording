@@ -128,6 +128,10 @@ python3 combine_utils/combine_videos.py video1.avi video2.avi -o combined.mp4 --
 
 ### Recording optimization
 
+- [Multi camera optimization blog post summary](docs/FFmpeg_Multi-Camera_DeepLabCut_Optimization.md) - Comprehensive guide for multi-camera recording optimization, including USB bandwidth management, encoding parameters, and streaming protocols
+- https://breq.dev/2023/06/21/cameras - Original blog post with detailed technical information about camera streaming pipelines
+
+### Other Resources
 - [FFmpeg Multi-Camera DeepLabCut Optimization](docs/FFmpeg_Multi-Camera_DeepLabCut_Optimization.rtf) - Comprehensive guide on optimizing multi-camera recordings for DeepLabCut, including USB bandwidth management, camera recommendations, and video encoding parameters
 
 ### General resources
