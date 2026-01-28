@@ -44,12 +44,13 @@ echo -n "Record single channel (Y/luminance only) for better performance? (y/n):
 read single_channel
 
 # Generate string to be evaluated using ffmpeg for video recording
+# Using full sensor resolution with downsampling (-vf scale) for maximum field of view
 if [[ "$single_channel" =~ ^[Yy]$ ]]; then
     echo "Recording single channel (Y/luminance only) for better performance..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -s 1280x720 -r 30 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
+    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -r 30 -vf \"scale=1280:720,extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
 else
     echo "Recording full color video..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
+    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -r 30 -vf scale=1280:720 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
 fi
 
 time_file="${fin_name}_markers.txt"
