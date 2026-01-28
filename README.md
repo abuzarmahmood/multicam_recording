@@ -74,6 +74,7 @@ V
 - Press Ctrl+C to stop recording
 - Outputs MP4 files with H.264 encoding for better compatibility and quality
 - Uses ffmpeg for modern video processing
+- **NEW**: Option to record single channel (Y/luminance only) for better performance using extractplanes filter
 
 ### Alternative: parallel2video_streamer.sh (Legacy)
 - Uses the older streamer utility for backward compatibility

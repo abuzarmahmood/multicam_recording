@@ -58,6 +58,32 @@ def test_ffmpeg_command_structure():
     
     print("✓ FFmpeg command structure tests passed")
 
+def test_single_channel_functionality():
+    """Test that ffmpeg script supports single channel recording"""
+    print("Testing single channel recording functionality...")
+    
+    with open("parallel2video_ffmpeg.sh", "r") as f:
+        content = f.read()
+    
+    # Check for single channel option prompt
+    assert "single channel" in content.lower(), "Script should ask about single channel recording"
+    assert "y/n" in content.lower(), "Script should provide y/n option for single channel"
+    
+    # Check for extractplanes filter
+    assert "extractplanes=y" in content, "Script should use extractplanes filter for single channel"
+    assert "-pix_fmt gray" in content, "Script should use gray pixel format for single channel"
+    
+    # Check for conditional logic
+    assert "single_channel" in content, "Script should use single_channel variable"
+    assert '[[ "$single_channel" =~ ^[Yy]$ ]]' in content, "Script should check for y/Y input"
+    
+    # Check that both normal and single channel commands exist
+    assert "-pix_fmt yuv420p" in content, "Script should support normal yuv420p pixel format"
+    assert "Recording full color video" in content, "Script should indicate normal recording mode"
+    assert "Recording single channel" in content, "Script should indicate single channel recording mode"
+    
+    print("✓ Single channel functionality tests passed")
+
 def test_streamer_command_structure():
     """Test that streamer script contains proper streamer commands"""
     print("Testing streamer command structure...")
@@ -150,6 +176,7 @@ def main():
         test_script_exists()
         test_script_syntax()
         test_ffmpeg_command_structure()
+        test_single_channel_functionality()
         test_streamer_command_structure()
         test_directory_structure_creation()
         test_script_differences()
