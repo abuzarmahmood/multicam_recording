@@ -6,12 +6,21 @@ When run requests input for filename and time in minutes
 Outputs:
 -Video files (MP4 format with H.264 encoding)
 -Marker text file (start and stop times for recording)
+
+Options:
+- Single channel recording: Uses extractplanes filter to record only Y (luminance) channel for better performance
+- Normal recording: Records full color video
 '
 # Initialize name template
 name_template=name_video_time
 # Request name and collect time
 echo -n "Enter name: "
 read name
+
+# Ask for single channel recording option
+echo -n "Record single channel (Y/luminance only) for better performance? (y/n): "
+read single_channel
+
 time=$(date +%g%m%d-%H%M%S)
 # Generate final name using input name and time
 fin_name=${name_template/name/$name}
@@ -26,7 +35,13 @@ mkdir $fin_name
 cd $fin_name
 
 # Generate string to be evaluated using ffmpeg for video recording
-exec_string="seq 0 1 | parallel -j 2 ffmpeg -f v4l2 -i /dev/video{} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{}.mp4"
+if [[ "$single_channel" =~ ^[Yy]$ ]]; then
+    echo "Recording single channel (Y/luminance only) for better performance..."
+    exec_string="seq 0 1 | parallel -j 2 ffmpeg -f v4l2 -i /dev/video{} -s 1280x720 -r 30 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt gray name_cam{}.mp4"
+else
+    echo "Recording full color video..."
+    exec_string="seq 0 1 | parallel -j 2 ffmpeg -f v4l2 -i /dev/video{} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{}.mp4"
+fi
 
 time_file="name_markers.txt"
 time_file=${time_file/name/$fin_name}
