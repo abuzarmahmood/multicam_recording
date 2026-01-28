@@ -26,7 +26,7 @@ mkdir $fin_name
 cd $fin_name
 
 # Generate string to be evaluated using ffmpeg for video recording
-exec_string="seq 0 1 | parallel -j 2 ffmpeg -f v4l2 -i /dev/video{} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{}.mp4"
+exec_string="seq 0 1 | parallel -j 2 ffmpeg -use_wallclock_as_timestamps 1 -f v4l2 -i /dev/video{} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{}.mp4"
 
 time_file="name_markers.txt"
 time_file=${time_file/name/$fin_name}
@@ -43,3 +43,15 @@ eval $exec_string
 echo "Stop time : $(date)"
 echo
 date +%s.%N | cut -b-14 >> $time_file
+
+# Extract timestamps from recorded video files
+echo "Extracting timestamps from video files..."
+for i in 0 1; do
+    if [ -f "${fin_name}_cam${i}.mp4" ]; then
+        echo "Extracting timestamps from ${fin_name}_cam${i}.mp4..."
+        ffmpeg -i "${fin_name}_cam${i}.mp4" -f mkvtimestamp_v2 "${fin_name}_cam${i}_timestamps.txt"
+        echo "Timestamps saved to ${fin_name}_cam${i}_timestamps.txt"
+    fi
+done
+
+echo "Recording and timestamp extraction complete!"
