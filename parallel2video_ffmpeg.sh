@@ -26,7 +26,8 @@ mkdir $fin_name
 cd $fin_name
 
 # Generate string to be evaluated using ffmpeg for video recording
-exec_string="seq 0 1 | parallel -j 2 ffmpeg -f v4l2 -i /dev/video{} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{}.mp4"
+# Using full sensor resolution with downsampling for maximum field of view and quality
+exec_string="seq 0 1 | parallel -j 2 ffmpeg -f v4l2 -i /dev/video{} -r 30 -vf scale=1280x720 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{}.mp4"
 
 time_file="name_markers.txt"
 time_file=${time_file/name/$fin_name}
