@@ -69,6 +69,7 @@ V
 3) split_script.py
 
 ### Step 1: Record video using parallel2video_ffmpeg.sh (Recommended)
+- Automatically checks disk space before starting recording
 - Supply filename for session, time and date automatically appended to name
 - Requires 2+ cameras connected to /dev/video<123>
 - Press Ctrl+C to stop recording
@@ -76,6 +77,7 @@ V
 - Uses ffmpeg for modern video processing
 
 ### Alternative: parallel2video_streamer.sh (Legacy)
+- Automatically checks disk space before starting recording
 - Uses the older streamer utility for backward compatibility
 - Outputs AVI files that may require conversion (handled in Step 2)
 - Use this if ffmpeg is not available or if you need to maintain compatibility with existing workflows
@@ -115,6 +117,55 @@ python3 combine_utils/combine_videos.py video1.avi video2.avi -o combined.mp4 --
 - 2 USB cameras (or other video devices)
 - Sufficient disk space for video recordings
 - Linux system recommended (some dependencies may not work on other OS)
+
+## Configuration
+
+The project uses a `config.json` file to configure various settings, including disk space requirements:
+
+### Disk Space Configuration
+
+The recording scripts automatically check for sufficient disk space before starting. The configuration includes:
+
+```json
+{
+  "disk_space": {
+    "min_free_space_gb": 10,
+    "warning_threshold_gb": 5,
+    "estimated_space_per_minute_gb": 0.5,
+    "max_recording_minutes": 180
+  }
+}
+```
+
+- `min_free_space_gb`: Minimum free space required before recording (default: 10 GB)
+- `warning_threshold_gb`: Show warning if remaining space after recording falls below this (default: 5 GB)
+- `estimated_space_per_minute_gb`: Estimated disk space needed per minute of recording (default: 0.5 GB)
+- `max_recording_minutes`: Maximum allowed recording duration in minutes (default: 180)
+
+### Recording Configuration
+
+```json
+{
+  "recording": {
+    "default_duration_minutes": 180,
+    "video_resolution": "1280x720",
+    "frame_rate": 30,
+    "num_cameras": 2
+  }
+}
+```
+
+### Manual Disk Space Check
+
+You can manually check disk space using the provided utility:
+
+```bash
+python3 disk_space_check.py [--config config.json] [--path .] [--duration 60]
+```
+
+- `--config`: Path to configuration file (default: config.json)
+- `--path`: Directory to check for disk space (default: current directory)
+- `--duration`: Expected recording duration in minutes (optional)
 
 ## Notes
 
