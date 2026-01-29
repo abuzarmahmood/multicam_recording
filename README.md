@@ -168,6 +168,127 @@ python3 disk_space_check.py [--config config.json] [--path .] [--duration 60]
 - `--path`: Directory to check for disk space (default: current directory)
 - `--duration`: Expected recording duration in minutes (optional)
 
+## FFmpeg Flags Reference
+
+This section documents all ffmpeg flags used in the project, explains why current settings were selected, and describes alternative options.
+
+### Recording Script (parallel2video_ffmpeg.sh)
+
+The main recording command uses:
+```bash
+ffmpeg -f v4l2 -i /dev/video0 -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p output.mp4
+```
+
+#### Input Flags
+
+| Flag | Value | Description | Alternatives |
+|------|-------|-------------|--------------|
+| `-f v4l2` | v4l2 | Video4Linux2 input format for Linux webcams | `-f dshow` (Windows), `-f avfoundation` (macOS) |
+| `-i` | /dev/videoX | Input device path | Use `v4l2-ctl --list-devices` to find available devices |
+| `-s` | 1280x720 | Input resolution (720p) | `640x480` (lower bandwidth), `1920x1080` (higher quality) |
+| `-r` | 30 | Frame rate in fps | `15` (lower bandwidth), `60` (smoother motion) |
+
+#### Encoding Flags
+
+| Flag | Value | Description | Why Selected | Alternatives |
+|------|-------|-------------|--------------|--------------|
+| `-c:v libx264` | libx264 | H.264 software encoder | Widely compatible, good compression | `libx265` (better compression, slower), `h264_nvenc` (NVIDIA GPU), `h264_vaapi` (Intel GPU) |
+| `-preset ultrafast` | ultrafast | Encoding speed preset | Minimizes CPU load during real-time recording | `superfast`, `veryfast`, `faster`, `fast`, `medium`, `slow`, `slower`, `veryslow` (slower = better compression) |
+| `-crf` | 23 | Constant Rate Factor (quality) | Balanced quality/size; 0=lossless, 51=worst | `18` (high quality), `28` (smaller files), `0` (lossless) |
+| `-pix_fmt yuv420p` | yuv420p | Pixel format | Maximum compatibility with players | `yuv444p` (better color), `gray` (grayscale) |
+
+#### Single Channel Recording (extractplanes filter)
+
+When single-channel mode is enabled:
+```bash
+ffmpeg ... -vf "extractplanes=y" ...
+```
+
+| Flag | Value | Description | Why Selected |
+|------|-------|-------------|--------------|
+| `-vf extractplanes=y` | y | Extract Y (luminance) plane only | Reduces data by ~50%, useful when color is not needed (e.g., tracking applications) |
+
+**Alternative plane options:** `u`, `v` (chrominance), `r`, `g`, `b`, `a` (RGBA components)
+
+### Conversion Script (convert_files_gui.sh)
+
+```bash
+ffmpeg -i input.avi -b:v 2500k output_converted.avi
+```
+
+| Flag | Value | Description | Why Selected | Alternatives |
+|------|-------|-------------|--------------|--------------|
+| `-i` | input.avi | Input file | - | - |
+| `-b:v` | 2500k | Video bitrate (2.5 Mbps) | Reasonable compression for archival | `1000k` (smaller), `5000k` (higher quality), use `-crf` instead for quality-based encoding |
+
+### Video Combining Script (combine_videos.py)
+
+The script builds ffmpeg commands dynamically. Key flags used:
+
+#### Scaling Filter
+```bash
+-filter_complex "[0:v]scale=640:-1:flags=lanczos[v0]"
+```
+
+| Flag | Value | Description | Why Selected | Alternatives |
+|------|-------|-------------|--------------|--------------|
+| `scale=640:-1` | 640:-1 | Scale width to 640, auto-calculate height | Maintains aspect ratio | `scale=1280:-1` (larger), `scale=-1:480` (height-based) |
+| `flags=lanczos` | lanczos | High-quality scaling algorithm | Best quality for downscaling | `bilinear` (faster), `bicubic` (balanced), `neighbor` (fastest, pixelated) |
+
+#### Layout Filters
+| Filter | Description | Use Case |
+|--------|-------------|----------|
+| `hstack` | Horizontal stack | Side-by-side videos |
+| `vstack` | Vertical stack | Top-bottom videos |
+| `xstack` | Grid layout | 2x2 or larger grids |
+
+#### Quality Settings
+| Quality Level | CRF | Preset | Use Case |
+|---------------|-----|--------|----------|
+| low | 28 | fast | Quick previews, small files |
+| medium | 23 | medium | General use |
+| high | 18 | slow | Archival, best quality |
+
+### Legacy Streamer Script (parallel2video_streamer.sh)
+
+```bash
+streamer -q -c /dev/video0 -s 1280x720 -f jpeg -t 324000 -r 30 -j 75 -w 0 -o output.avi
+```
+
+| Flag | Value | Description |
+|------|-------|-------------|
+| `-q` | - | Quiet mode |
+| `-c` | /dev/videoX | Capture device |
+| `-s` | 1280x720 | Resolution |
+| `-f` | jpeg | Output format (MJPEG) |
+| `-t` | 324000 | Total frames (30fps × 60s × 180min) |
+| `-r` | 30 | Frame rate |
+| `-j` | 75 | JPEG quality (0-100) |
+| `-w` | 0 | Wait time between frames |
+| `-o` | output.avi | Output file |
+
+### Choosing the Right Settings
+
+#### For Real-time Recording
+- Use `-preset ultrafast` to minimize CPU load
+- Use `-crf 23` for balanced quality
+- Consider single-channel mode if color is not needed
+
+#### For Post-processing/Archival
+- Use `-preset slow` or `veryslow` for better compression
+- Use `-crf 18` for higher quality
+- Use `-b:v` for predictable file sizes
+
+#### For Multi-camera Setups
+- Monitor USB bandwidth (see docs/FFmpeg_Multi-Camera_DeepLabCut_Optimization.md)
+- Consider MJPEG input mode to reduce USB bandwidth
+- Use hardware encoding if available (`h264_nvenc`, `h264_vaapi`)
+
+#### For DeepLabCut/Tracking Applications
+- Single-channel (Y plane) recording reduces file size without losing tracking accuracy
+- Lower resolutions (640x480) may be sufficient and reduce bandwidth
+- Consistent frame rate is more important than high resolution
+
 ## Notes
 
 - The scripts are designed for Linux systems
