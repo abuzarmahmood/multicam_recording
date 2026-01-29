@@ -31,11 +31,66 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     echo "  - ffmpeg"
     echo "  - GNU parallel"
     echo "  - figlet"
-    echo "  - Two video devices at /dev/video0 and /dev/video1"
+    echo "  - jq"
+    echo "  - Video devices configured in config.json"
     echo ""
     echo "Press Ctrl+C to stop recording."
     exit 0
 fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/config.json"
+
+# Check video devices from config
+echo "Checking video devices..."
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "❌ Config file not found: $CONFIG_FILE"
+    exit 1
+fi
+
+# Read video devices from config
+mapfile -t WANTED_DEVICES < <(jq -r '.video_devices[]' "$CONFIG_FILE" 2>/dev/null)
+if [ ${#WANTED_DEVICES[@]} -eq 0 ]; then
+    echo "❌ No video devices configured in config.json"
+    exit 1
+fi
+
+# Check which devices exist
+AVAILABLE_DEVICES=()
+MISSING_DEVICES=()
+for device in "${WANTED_DEVICES[@]}"; do
+    if [ -e "$device" ]; then
+        AVAILABLE_DEVICES+=("$device")
+        echo "✅ Found: $device"
+    else
+        MISSING_DEVICES+=("$device")
+        echo "❌ Missing: $device"
+    fi
+done
+
+# Handle missing devices
+if [ ${#MISSING_DEVICES[@]} -gt 0 ]; then
+    if [ ${#AVAILABLE_DEVICES[@]} -eq 0 ]; then
+        echo ""
+        echo "❌ No video devices available. Cannot proceed."
+        exit 1
+    fi
+    
+    echo ""
+    echo "⚠️  ${#MISSING_DEVICES[@]} device(s) not found."
+    echo "Available devices: ${AVAILABLE_DEVICES[*]}"
+    echo ""
+    echo -n "Continue with ${#AVAILABLE_DEVICES[@]} available device(s)? [y/N]: "
+    read continue_choice
+    if [[ ! "$continue_choice" =~ ^[Yy]$ ]]; then
+        echo "Aborting."
+        exit 1
+    fi
+fi
+
+NUM_CAMERAS=${#AVAILABLE_DEVICES[@]}
+echo ""
+echo "Recording with $NUM_CAMERAS camera(s)"
 
 # Request output directory with default
 default_output_dir="./recorded_videos"
@@ -48,7 +103,6 @@ mkdir -p "$output_dir"
 
 # Check disk space before starting recording
 echo "Checking disk space..."
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 python3 "$SCRIPT_DIR/disk_space_check.py" --path "$output_dir"
 if [ $? -ne 0 ]; then
     echo "❌ Disk space check failed. Please free up disk space and try again."
@@ -73,8 +127,18 @@ duration=180
 mkdir -p "$output_dir/$fin_name"
 cd "$output_dir/$fin_name"
 
+# Build device list for parallel execution
+DEVICE_LIST=""
+for i in "${!AVAILABLE_DEVICES[@]}"; do
+    if [ -n "$DEVICE_LIST" ]; then
+        DEVICE_LIST="$DEVICE_LIST\n$i:${AVAILABLE_DEVICES[$i]}"
+    else
+        DEVICE_LIST="$i:${AVAILABLE_DEVICES[$i]}"
+    fi
+done
+
 # Generate string to be evaluated using ffmpeg for video recording
-exec_string="seq 0 1 | parallel -j 2 ffmpeg -f v4l2 -i /dev/video{} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{}.mp4"
+exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
 
 time_file="name_markers.txt"
 time_file=${time_file/name/$fin_name}
