@@ -18,13 +18,14 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     echo "  -h, --help    Show this help message and exit"
     echo ""
     echo "Inputs (prompted interactively):"
+    echo "  output_dir    Directory to save recordings (default: ./recorded_videos)"
     echo "  name          Base name for output files"
     echo ""
     echo "Outputs:"
-    echo "  <name>_video_<timestamp>/           Directory containing all outputs"
-    echo "  <name>_video_<timestamp>_cam0.mp4   Video from camera 0 (H.264, 1280x720, 30fps)"
-    echo "  <name>_video_<timestamp>_cam1.mp4   Video from camera 1 (H.264, 1280x720, 30fps)"
-    echo "  <name>_video_<timestamp>_markers.txt  Start/stop timestamps (Unix epoch)"
+    echo "  <output_dir>/<name>_video_<timestamp>/           Directory containing all outputs"
+    echo "  <output_dir>/<name>_video_<timestamp>_cam0.mp4   Video from camera 0 (H.264, 1280x720, 30fps)"
+    echo "  <output_dir>/<name>_video_<timestamp>_cam1.mp4   Video from camera 1 (H.264, 1280x720, 30fps)"
+    echo "  <output_dir>/<name>_video_<timestamp>_markers.txt  Start/stop timestamps (Unix epoch)"
     echo ""
     echo "Requirements:"
     echo "  - ffmpeg"
@@ -34,11 +35,21 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     echo ""
     echo "Press Ctrl+C to stop recording."
     exit 0
-    
+fi
+
+# Request output directory with default
+default_output_dir="./recorded_videos"
+echo -n "Enter output directory [$default_output_dir]: "
+read output_dir
+output_dir=${output_dir:-$default_output_dir}
+
+# Create output directory if it doesn't exist
+mkdir -p "$output_dir"
+
 # Check disk space before starting recording
 echo "Checking disk space..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-python3 "$SCRIPT_DIR/disk_space_check.py" --path .
+python3 "$SCRIPT_DIR/disk_space_check.py" --path "$output_dir"
 if [ $? -ne 0 ]; then
     echo "❌ Disk space check failed. Please free up disk space and try again."
     exit 1
@@ -58,9 +69,9 @@ echo "File name : $fin_name"
 # Duration set to very large number, script is killed to stop recording
 duration=180
 
-# Make directory to store everything using final name
-mkdir $fin_name
-cd $fin_name
+# Make directory to store everything using final name inside output directory
+mkdir -p "$output_dir/$fin_name"
+cd "$output_dir/$fin_name"
 
 # Generate string to be evaluated using ffmpeg for video recording
 exec_string="seq 0 1 | parallel -j 2 ffmpeg -f v4l2 -i /dev/video{} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{}.mp4"
