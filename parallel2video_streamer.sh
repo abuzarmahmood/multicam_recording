@@ -7,6 +7,15 @@ Outputs:
 -Video files
 -Marker text file (start and stop times for recording)
 '
+# Check disk space before starting recording
+echo "Checking disk space..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python3 "$SCRIPT_DIR/disk_space_check.py" --path .
+if [ $? -ne 0 ]; then
+    echo "❌ Disk space check failed. Please free up disk space and try again."
+    exit 1
+fi
+
 # Initialize name template
 name_template=name_video_time
 # Request name and collect time

@@ -1,0 +1,14 @@
+{
+  "disk_space": {
+    "min_free_space_gb": 10,
+    "warning_threshold_gb": 5,
+    "estimated_space_per_minute_gb": 0.5,
+    "max_recording_minutes": 180
+  },
+  "recording": {
+    "default_duration_minutes": 180,
+    "video_resolution": "1280x720",
+    "frame_rate": 30,
+    "num_cameras": 2
+  }
+}
