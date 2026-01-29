@@ -18,13 +18,14 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     echo "  -h, --help    Show this help message and exit"
     echo ""
     echo "Inputs (prompted interactively):"
+    echo "  output_dir    Directory to save recordings (default: ./recorded_videos)"
     echo "  name          Base name for output files"
     echo ""
     echo "Outputs:"
-    echo "  <name>_video_<timestamp>/           Directory containing all outputs"
-    echo "  <name>_video_<timestamp>_cam0.avi   Video from camera 0 (JPEG, 1280x720, 30fps)"
-    echo "  <name>_video_<timestamp>_cam1.avi   Video from camera 1 (JPEG, 1280x720, 30fps)"
-    echo "  <name>_video_<timestamp>_markers.txt  Start/stop timestamps (Unix epoch)"
+    echo "  <output_dir>/<name>_video_<timestamp>/           Directory containing all outputs"
+    echo "  <output_dir>/<name>_video_<timestamp>_cam0.avi   Video from camera 0 (JPEG, 1280x720, 30fps)"
+    echo "  <output_dir>/<name>_video_<timestamp>_cam1.avi   Video from camera 1 (JPEG, 1280x720, 30fps)"
+    echo "  <output_dir>/<name>_video_<timestamp>_markers.txt  Start/stop timestamps (Unix epoch)"
     echo ""
     echo "Requirements:"
     echo "  - streamer"
@@ -34,11 +35,21 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     echo ""
     echo "Press Ctrl+C to stop recording."
     exit 0
+fi
+
+# Request output directory with default
+default_output_dir="./recorded_videos"
+echo -n "Enter output directory [$default_output_dir]: "
+read output_dir
+output_dir=${output_dir:-$default_output_dir}
+
+# Create output directory if it doesn't exist
+mkdir -p "$output_dir"
 
 # Check disk space before starting recording
 echo "Checking disk space..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-python3 "$SCRIPT_DIR/disk_space_check.py" --path .
+python3 "$SCRIPT_DIR/disk_space_check.py" --path "$output_dir"
 if [ $? -ne 0 ]; then
     echo "❌ Disk space check failed. Please free up disk space and try again."
     exit 1
@@ -59,9 +70,9 @@ echo "File name : $fin_name"
 duration=180
 frames=$(expr 30 \* 60 \* $duration)
 
-# Make directory to store everything using final name
-mkdir $fin_name
-cd $fin_name
+# Make directory to store everything using final name inside output directory
+mkdir -p "$output_dir/$fin_name"
+cd "$output_dir/$fin_name"
 
 # Generate string to be evaluated
 exec_string="seq 0 1 | parallel -j 2 streamer -q -c /dev/video{} -s 1280x720 -f jpeg -t frames -r 30 -j 75 -w 0 -o name_cam{}.avi"
