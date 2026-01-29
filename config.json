@@ -10,5 +10,9 @@
     "video_resolution": "1280x720",
     "frame_rate": 30,
     "num_cameras": 2
-  }
+  },
+  "video_devices": [
+    "/dev/video0",
+    "/dev/video1"
+  ]
 }
