@@ -48,13 +48,13 @@ def test_ffmpeg_command_structure():
     # Check for key ffmpeg components
     assert "ffmpeg" in content, "Script should contain ffmpeg command"
     assert "-f v4l2" in content, "Script should use v4l2 format for Linux cameras"
-    assert "-i /dev/video{}" in content, "Script should reference video devices"
+    assert "-i {2}" in content, "Script should reference video devices dynamically"
     assert "-s 1280x720" in content, "Script should set video resolution"
     assert "-r 30" in content, "Script should set frame rate"
     assert "libx264" in content, "Script should use H.264 encoding"
     assert "-preset ultrafast" in content, "Script should use ultrafast preset for low latency"
     assert "-crf 23" in content, "Script should set quality level"
-    assert "parallel -j 2" in content, "Script should use parallel for simultaneous recording"
+    assert "parallel -j $NUM_CAMERAS" in content, "Script should use parallel with dynamic camera count"
     
     print("✓ FFmpeg command structure tests passed")
 
@@ -93,11 +93,11 @@ def test_streamer_command_structure():
     
     # Check for key streamer components
     assert "streamer" in content, "Script should contain streamer command"
-    assert "-c /dev/video{}" in content, "Script should reference video devices"
+    assert "-c {2}" in content, "Script should reference video devices dynamically"
     assert "-s 1280x720" in content, "Script should set video resolution"
     assert "-f jpeg" in content, "Script should use jpeg format"
     assert "-r 30" in content, "Script should set frame rate"
-    assert "parallel -j 2" in content, "Script should use parallel for simultaneous recording"
+    assert "parallel -j $NUM_CAMERAS" in content, "Script should use parallel with dynamic camera count"
     assert ".avi" in content, "Script should output AVI files"
     
     print("✓ Streamer command structure tests passed")
@@ -113,8 +113,8 @@ def test_directory_structure_creation():
             content = f.read()
         
         # Check for directory creation
-        assert "mkdir $fin_name" in content, f"{script} should create directory with final name"
-        assert "cd $fin_name" in content, f"{script} should change to created directory"
+        assert 'mkdir -p "$output_dir/$fin_name"' in content, f"{script} should create directory with final name"
+        assert 'cd "$output_dir/$fin_name"' in content, f"{script} should change to created directory"
         
         # Check for marker file creation
         assert "markers.txt" in content, f"{script} should create marker file"
@@ -123,6 +123,49 @@ def test_directory_structure_creation():
         assert "date +%s.%N" in content, f"{script} should record timestamps"
     
     print("✓ Directory structure creation tests passed")
+
+def test_device_checking():
+    """Test that scripts check for video devices from config"""
+    print("Testing device checking functionality...")
+    
+    scripts = ["parallel2video_ffmpeg.sh", "parallel2video_streamer.sh"]
+    
+    for script in scripts:
+        with open(script, "r") as f:
+            content = f.read()
+        
+        # Check for config file reading
+        assert "config.json" in content, f"{script} should read from config.json"
+        assert "jq" in content, f"{script} should use jq to parse config"
+        assert "video_devices" in content, f"{script} should read video_devices from config"
+        
+        # Check for device existence checking
+        assert "AVAILABLE_DEVICES" in content, f"{script} should track available devices"
+        assert "MISSING_DEVICES" in content, f"{script} should track missing devices"
+        assert '[ -e "$device" ]' in content, f"{script} should check if device exists"
+        
+        # Check for user prompt on missing devices
+        assert "Continue with" in content, f"{script} should prompt user to continue"
+        assert "Aborting" in content, f"{script} should allow user to abort"
+    
+    print("✓ Device checking tests passed")
+
+def test_config_has_video_devices():
+    """Test that config.json has video_devices array"""
+    print("Testing config.json video_devices...")
+    
+    import json
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    
+    assert "video_devices" in config, "config.json should have video_devices"
+    assert isinstance(config["video_devices"], list), "video_devices should be a list"
+    assert len(config["video_devices"]) > 0, "video_devices should not be empty"
+    
+    for device in config["video_devices"]:
+        assert device.startswith("/dev/video"), f"Device {device} should be a /dev/video path"
+    
+    print("✓ Config video_devices tests passed")
 
 def test_script_differences():
     """Test that ffmpeg and streamer scripts have key differences"""
@@ -179,6 +222,8 @@ def main():
         test_single_channel_functionality()
         test_streamer_command_structure()
         test_directory_structure_creation()
+        test_device_checking()
+        test_config_has_video_devices()
         test_script_differences()
         test_readme_updated()
         
