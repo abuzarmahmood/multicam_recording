@@ -39,6 +39,10 @@ setup_recording_directory "$output_dir" "$fin_name"
 # Build device list for parallel execution
 build_device_list
 
+# Ask for single channel recording option
+echo -n "Record single channel (Y/luminance only) for better performance? (y/n): "
+read single_channel
+
 # Generate string to be evaluated using ffmpeg for video recording
 if [[ "$single_channel" =~ ^[Yy]$ ]]; then
     echo "Recording single channel (Y/luminance only) for better performance..."
