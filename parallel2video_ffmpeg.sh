@@ -6,6 +6,10 @@ When run requests input for filename and time in minutes
 Outputs:
 -Video files (MP4 format with H.264 encoding)
 -Marker text file (start and stop times for recording)
+
+Options:
+- Single channel recording: Uses extractplanes filter to record only Y (luminance) channel for better performance
+- Normal recording: Records full color video
 '
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,8 +39,18 @@ setup_recording_directory "$output_dir" "$fin_name"
 # Build device list for parallel execution
 build_device_list
 
+# Ask for single channel recording option
+echo -n "Record single channel (Y/luminance only) for better performance? (y/n): "
+read single_channel
+
 # Generate string to be evaluated using ffmpeg for video recording
-exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p ${fin_name}_cam{1}.mp4"
+if [[ "$single_channel" =~ ^[Yy]$ ]]; then
+    echo "Recording single channel (Y/luminance only) for better performance..."
+    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -s 1280x720 -r 30 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
+else
+    echo "Recording full color video..."
+    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
+fi
 
 time_file="${fin_name}_markers.txt"
 
