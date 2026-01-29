@@ -7,6 +7,35 @@ Outputs:
 -Video files
 -Marker text file (start and stop times for recording)
 '
+
+# Help flag
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "Usage: $(basename "$0") [OPTIONS]"
+    echo ""
+    echo "Record video from 2 cameras simultaneously using streamer."
+    echo ""
+    echo "Options:"
+    echo "  -h, --help    Show this help message and exit"
+    echo ""
+    echo "Inputs (prompted interactively):"
+    echo "  name          Base name for output files"
+    echo ""
+    echo "Outputs:"
+    echo "  <name>_video_<timestamp>/           Directory containing all outputs"
+    echo "  <name>_video_<timestamp>_cam0.avi   Video from camera 0 (JPEG, 1280x720, 30fps)"
+    echo "  <name>_video_<timestamp>_cam1.avi   Video from camera 1 (JPEG, 1280x720, 30fps)"
+    echo "  <name>_video_<timestamp>_markers.txt  Start/stop timestamps (Unix epoch)"
+    echo ""
+    echo "Requirements:"
+    echo "  - streamer"
+    echo "  - GNU parallel"
+    echo "  - figlet"
+    echo "  - Two video devices at /dev/video0 and /dev/video1"
+    echo ""
+    echo "Press Ctrl+C to stop recording."
+    exit 0
+fi
+
 # Initialize name template
 name_template=name_video_time
 # Request name and collect time
