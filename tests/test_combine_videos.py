@@ -5,7 +5,8 @@ Test script for combine_videos.py functionality
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'combine_utils'))
 
 from combine_videos import determine_grid_layout, get_quality_settings, build_ffmpeg_command
 

@@ -10,17 +10,20 @@ import tempfile
 import shutil
 from pathlib import Path
 
+# Get the parent directory path
+script_dir = Path(__file__).parent.parent
+
 def test_script_exists():
     """Test that both scripts exist and are executable"""
     print("Testing script existence and executability...")
     
     # Test ffmpeg script
-    ffmpeg_script = Path("parallel2video_ffmpeg.sh")
+    ffmpeg_script = script_dir / "parallel2video_ffmpeg.sh"
     assert ffmpeg_script.exists(), "parallel2video_ffmpeg.sh should exist"
     assert os.access(ffmpeg_script, os.X_OK), "parallel2video_ffmpeg.sh should be executable"
     
     # Test streamer script
-    streamer_script = Path("parallel2video_streamer.sh")
+    streamer_script = script_dir / "parallel2video_streamer.sh"
     assert streamer_script.exists(), "parallel2video_streamer.sh should exist"
     assert os.access(streamer_script, os.X_OK), "parallel2video_streamer.sh should be executable"
     
@@ -35,10 +38,10 @@ def test_script_syntax():
     """Test that scripts have valid bash syntax"""
     print("Testing script syntax...")
     
-    scripts = ["parallel2video_ffmpeg.sh", "parallel2video_streamer.sh", "recording_utils.sh"]
+    scripts = [script_dir / "parallel2video_ffmpeg.sh", script_dir / "parallel2video_streamer.sh", script_dir / "recording_utils.sh"]
     
     for script in scripts:
-        result = subprocess.run(["bash", "-n", script], capture_output=True, text=True)
+        result = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
         assert result.returncode == 0, f"{script} should have valid bash syntax. Error: {result.stderr}"
     
     print("✓ Script syntax tests passed")
@@ -47,7 +50,7 @@ def test_ffmpeg_command_structure():
     """Test that ffmpeg script contains proper ffmpeg commands"""
     print("Testing ffmpeg command structure...")
     
-    with open("parallel2video_ffmpeg.sh", "r") as f:
+    with open(script_dir / "parallel2video_ffmpeg.sh", "r") as f:
         content = f.read()
     
     # Check for key ffmpeg components
@@ -93,7 +96,7 @@ def test_streamer_command_structure():
     """Test that streamer script contains proper streamer commands"""
     print("Testing streamer command structure...")
     
-    with open("parallel2video_streamer.sh", "r") as f:
+    with open(script_dir / "parallel2video_streamer.sh", "r") as f:
         content = f.read()
     
     # Check for key streamer components
@@ -111,7 +114,7 @@ def test_directory_structure_creation():
     """Test that scripts create proper directory structure"""
     print("Testing directory structure creation logic...")
     
-    scripts = ["parallel2video_ffmpeg.sh", "parallel2video_streamer.sh"]
+    scripts = [script_dir / "parallel2video_ffmpeg.sh", script_dir / "parallel2video_streamer.sh"]
     
     # Read utils file for shared functionality
     with open("recording_utils.sh", "r") as f:
@@ -192,10 +195,10 @@ def test_script_differences():
     """Test that ffmpeg and streamer scripts have key differences"""
     print("Testing script differences...")
     
-    with open("parallel2video_ffmpeg.sh", "r") as f:
+    with open(script_dir / "parallel2video_ffmpeg.sh", "r") as f:
         ffmpeg_content = f.read()
     
-    with open("parallel2video_streamer.sh", "r") as f:
+    with open(script_dir / "parallel2video_streamer.sh", "r") as f:
         streamer_content = f.read()
     
     # FFmpeg script should use ffmpeg, not streamer
@@ -216,7 +219,7 @@ def test_readme_updated():
     """Test that README has been updated with new script names"""
     print("Testing README updates...")
     
-    with open("README.md", "r") as f:
+    with open(script_dir / "README.md", "r") as f:
         readme_content = f.read()
     
     # Check for new script names
