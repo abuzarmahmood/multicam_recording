@@ -24,13 +24,18 @@ def test_script_exists():
     assert streamer_script.exists(), "parallel2video_streamer.sh should exist"
     assert os.access(streamer_script, os.X_OK), "parallel2video_streamer.sh should be executable"
     
+    # Test utils script
+    utils_script = Path("recording_utils.sh")
+    assert utils_script.exists(), "recording_utils.sh should exist"
+    assert os.access(utils_script, os.X_OK), "recording_utils.sh should be executable"
+    
     print("✓ Script existence and executability tests passed")
 
 def test_script_syntax():
     """Test that scripts have valid bash syntax"""
     print("Testing script syntax...")
     
-    scripts = ["parallel2video_ffmpeg.sh", "parallel2video_streamer.sh"]
+    scripts = ["parallel2video_ffmpeg.sh", "parallel2video_streamer.sh", "recording_utils.sh"]
     
     for script in scripts:
         result = subprocess.run(["bash", "-n", script], capture_output=True, text=True)
@@ -108,19 +113,27 @@ def test_directory_structure_creation():
     
     scripts = ["parallel2video_ffmpeg.sh", "parallel2video_streamer.sh"]
     
+    # Read utils file for shared functionality
+    with open("recording_utils.sh", "r") as f:
+        utils_content = f.read()
+    
+    # Check for directory creation in utils
+    assert 'mkdir -p "$output_dir/$fin_name"' in utils_content, "Utils should create directory with final name"
+    assert 'cd "$output_dir/$fin_name"' in utils_content, "Utils should change to created directory"
+    
+    # Check for timing functionality in utils
+    assert "date +%s.%N" in utils_content, "Utils should record timestamps"
+    
     for script in scripts:
         with open(script, "r") as f:
             content = f.read()
         
-        # Check for directory creation
-        assert 'mkdir -p "$output_dir/$fin_name"' in content, f"{script} should create directory with final name"
-        assert 'cd "$output_dir/$fin_name"' in content, f"{script} should change to created directory"
+        # Check that scripts source utils and use shared functions
+        assert "source" in content and "recording_utils.sh" in content, f"{script} should source recording_utils.sh"
+        assert "setup_recording_directory" in content, f"{script} should use setup_recording_directory function"
         
         # Check for marker file creation
         assert "markers.txt" in content, f"{script} should create marker file"
-        
-        # Check for timing functionality
-        assert "date +%s.%N" in content, f"{script} should record timestamps"
     
     print("✓ Directory structure creation tests passed")
 
@@ -128,25 +141,33 @@ def test_device_checking():
     """Test that scripts check for video devices from config"""
     print("Testing device checking functionality...")
     
+    # Read utils file for shared functionality
+    with open("recording_utils.sh", "r") as f:
+        utils_content = f.read()
+    
+    # Check for config file reading in utils
+    assert "config.json" in utils_content, "Utils should read from config.json"
+    assert "jq" in utils_content, "Utils should use jq to parse config"
+    assert "video_devices" in utils_content, "Utils should read video_devices from config"
+    
+    # Check for device existence checking in utils
+    assert "AVAILABLE_DEVICES" in utils_content, "Utils should track available devices"
+    assert "missing_devices" in utils_content, "Utils should track missing devices"
+    assert '[ -e "$device" ]' in utils_content, "Utils should check if device exists"
+    
+    # Check for user prompt on missing devices in utils
+    assert "Continue with" in utils_content, "Utils should prompt user to continue"
+    assert "Aborting" in utils_content, "Utils should allow user to abort"
+    
     scripts = ["parallel2video_ffmpeg.sh", "parallel2video_streamer.sh"]
     
     for script in scripts:
         with open(script, "r") as f:
             content = f.read()
         
-        # Check for config file reading
-        assert "config.json" in content, f"{script} should read from config.json"
-        assert "jq" in content, f"{script} should use jq to parse config"
-        assert "video_devices" in content, f"{script} should read video_devices from config"
-        
-        # Check for device existence checking
-        assert "AVAILABLE_DEVICES" in content, f"{script} should track available devices"
-        assert "MISSING_DEVICES" in content, f"{script} should track missing devices"
-        assert '[ -e "$device" ]' in content, f"{script} should check if device exists"
-        
-        # Check for user prompt on missing devices
-        assert "Continue with" in content, f"{script} should prompt user to continue"
-        assert "Aborting" in content, f"{script} should allow user to abort"
+        # Check that scripts source utils and use shared functions
+        assert "source" in content and "recording_utils.sh" in content, f"{script} should source recording_utils.sh"
+        assert "load_video_devices" in content, f"{script} should use load_video_devices function"
     
     print("✓ Device checking tests passed")
 
