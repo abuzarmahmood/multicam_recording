@@ -16,6 +16,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 def parse_arguments():
     """Parse command line arguments"""
@@ -49,6 +50,17 @@ def parse_arguments():
         default='high',
         choices=['low', 'medium', 'high'],
         help='Output video quality (default: high)'
+    )
+    parser.add_argument(
+        '--timestamps',
+        nargs='+',
+        help='Timestamp files for each video (in same order as input videos). '
+             'Used to align videos based on wall-clock timestamps.'
+    )
+    parser.add_argument(
+        '--align',
+        action='store_true',
+        help='Auto-detect timestamp files based on video filenames (looks for cam*_timestamps.txt)'
     )
     return parser.parse_args()
 
@@ -84,15 +96,21 @@ def get_quality_settings(quality):
     }
     return settings.get(quality, settings['high'])
 
-def build_ffmpeg_command(input_videos, output_file, rows, cols, scale_width, quality):
+def build_ffmpeg_command(input_videos, output_file, rows, cols, scale_width, quality, offsets=None):
     """Build the ffmpeg command for combining videos"""
     quality_settings = get_quality_settings(quality)
+    
+    if offsets is None:
+        offsets = [0.0] * len(input_videos)
     
     # Start building the command
     cmd = ['ffmpeg']
     
-    # Add input files
-    for video in input_videos:
+    # Add input files with timing offsets using itsoffset
+    for i, video in enumerate(input_videos):
+        if offsets[i] > 0:
+            # Delay this video by the offset amount
+            cmd.extend(['-itsoffset', str(offsets[i])])
         cmd.extend(['-i', video])
     
     # Build filter complex
@@ -166,6 +184,132 @@ def validate_input_files(input_videos):
             print(f"Error: Cannot read input file '{video}'")
             return False
     return True
+
+
+def read_timestamp_file(timestamp_file: str) -> Optional[List[float]]:
+    """
+    Read timestamps from an mkvtimestamp_v2 format file.
+    
+    The format has a header line "# timestamp format v2" followed by
+    timestamps in milliseconds, one per line.
+    
+    Returns list of timestamps in seconds, or None if file cannot be read.
+    """
+    if not os.path.exists(timestamp_file):
+        return None
+    
+    timestamps = []
+    try:
+        with open(timestamp_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                # Skip header and empty lines
+                if line.startswith('#') or not line:
+                    continue
+                try:
+                    # Timestamps are in milliseconds, convert to seconds
+                    timestamps.append(float(line) / 1000.0)
+                except ValueError:
+                    continue
+    except IOError as e:
+        print(f"Warning: Could not read timestamp file '{timestamp_file}': {e}")
+        return None
+    
+    return timestamps if timestamps else None
+
+
+def find_timestamp_file_for_video(video_path: str) -> Optional[str]:
+    """
+    Auto-detect timestamp file for a video based on naming convention.
+    
+    Looks for cam*_timestamps.txt in the same directory as the video.
+    For a video named 'name_cam0.mp4', looks for 'cam0_timestamps.txt'.
+    """
+    video_dir = os.path.dirname(video_path) or '.'
+    video_name = os.path.basename(video_path)
+    
+    # Extract camera number from video filename (e.g., name_cam0.mp4 -> 0)
+    import re
+    match = re.search(r'cam(\d+)', video_name)
+    if match:
+        cam_num = match.group(1)
+        timestamp_file = os.path.join(video_dir, f'cam{cam_num}_timestamps.txt')
+        if os.path.exists(timestamp_file):
+            return timestamp_file
+    
+    return None
+
+
+def calculate_alignment_offsets(timestamp_files: List[Optional[str]]) -> List[float]:
+    """
+    Calculate time offsets to align videos based on their first timestamps.
+    
+    Returns a list of offsets in seconds. Each video should be delayed by
+    its offset to align with the video that started earliest.
+    """
+    first_timestamps = []
+    
+    for ts_file in timestamp_files:
+        if ts_file is None:
+            first_timestamps.append(None)
+            continue
+        
+        timestamps = read_timestamp_file(ts_file)
+        if timestamps and len(timestamps) > 0:
+            first_timestamps.append(timestamps[0])
+        else:
+            first_timestamps.append(None)
+    
+    # Find the minimum (earliest) timestamp among all videos
+    valid_timestamps = [t for t in first_timestamps if t is not None]
+    if not valid_timestamps:
+        # No valid timestamps, return zero offsets
+        return [0.0] * len(timestamp_files)
+    
+    min_timestamp = min(valid_timestamps)
+    
+    # Calculate offsets relative to the earliest video
+    offsets = []
+    for ts in first_timestamps:
+        if ts is not None:
+            offsets.append(ts - min_timestamp)
+        else:
+            offsets.append(0.0)
+    
+    return offsets
+
+
+def get_timestamp_files(args, input_videos: List[str]) -> List[Optional[str]]:
+    """
+    Get timestamp files based on command line arguments.
+    
+    Returns a list of timestamp file paths (or None for videos without timestamps).
+    """
+    if args.timestamps:
+        # Explicit timestamp files provided
+        if len(args.timestamps) != len(input_videos):
+            print(f"Warning: Number of timestamp files ({len(args.timestamps)}) "
+                  f"doesn't match number of videos ({len(input_videos)})")
+            # Pad with None or truncate
+            timestamp_files = list(args.timestamps)
+            while len(timestamp_files) < len(input_videos):
+                timestamp_files.append(None)
+            return timestamp_files[:len(input_videos)]
+        return args.timestamps
+    
+    elif args.align:
+        # Auto-detect timestamp files
+        timestamp_files = []
+        for video in input_videos:
+            ts_file = find_timestamp_file_for_video(video)
+            timestamp_files.append(ts_file)
+            if ts_file:
+                print(f"Found timestamp file for {video}: {ts_file}")
+            else:
+                print(f"No timestamp file found for {video}")
+        return timestamp_files
+    
+    return [None] * len(input_videos)
 
 def main():
     """Main function to combine videos"""
