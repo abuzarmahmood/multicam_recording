@@ -28,10 +28,13 @@ cleanup_on_interrupt() {
     # Extract timestamps from recorded video files
     echo "Extracting timestamps from video files..."
     for i in $(seq 0 $((NUM_CAMERAS - 1))); do
-        if [ -f "${fin_name}_cam${i}.mp4" ]; then
-            echo "Extracting timestamps from ${fin_name}_cam${i}.mp4..."
-            ffmpeg -i "${fin_name}_cam${i}.mp4" -f mkvtimestamp_v2 "${fin_name}_cam${i}_timestamps.txt" 2>/dev/null
-            echo "Timestamps saved to ${fin_name}_cam${i}_timestamps.txt"
+        # We are already in the recording directory
+        video_file="name_cam${i}.mp4"
+        timestamps_file="cam${i}_timestamps.txt"
+        if [ -f $video_file ]; then
+            echo "Extracting timestamps from ${video_file}..." 
+            ffmpeg -i $video_file -f mkvtimestamp_v2 -copyts $timestamps_file 2>/dev/null
+            echo "Timestamps saved to ${timestamps_file}" 
         fi
     done
     
@@ -74,10 +77,10 @@ read single_channel
 # Uses -use_wallclock_as_timestamps 1 to save wall-clock timestamps in video files
 if [[ "$single_channel" =~ ^[Yy]$ ]]; then
     echo "Recording single channel (Y/luminance only) for better performance..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -f v4l2 -i {2} -s 1280x720 -r 30 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
+    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -i {2} -s 1280x720 -r 30 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
 else
     echo "Recording full color video..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
+    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
 fi
 
 time_file="${fin_name}_markers.txt"
@@ -95,13 +98,9 @@ trap - SIGINT
 stop_recording "$time_file"
 
 # Extract timestamps from recorded video files
-echo "Extracting timestamps from video files..."
-for i in $(seq 0 $((NUM_CAMERAS - 1))); do
-    if [ -f "${fin_name}_cam${i}.mp4" ]; then
-        echo "Extracting timestamps from ${fin_name}_cam${i}.mp4..."
-        ffmpeg -i "${fin_name}_cam${i}.mp4" -f mkvtimestamp_v2 "${fin_name}_cam${i}_timestamps.txt"
-        echo "Timestamps saved to ${fin_name}_cam${i}_timestamps.txt"
-    fi
-done
+# If not interrupted, extract timestamps here
+if [ $? -eq 0 ]; then
+    cleanup_on_interrupt
+fi
 
 echo "Recording and timestamp extraction complete!"
