@@ -172,30 +172,102 @@ python3 disk_space_check.py [--config config.json] [--path .] [--duration 60]
 
 This section documents all ffmpeg flags used in the project, explains why current settings were selected, and describes alternative options.
 
+### Understanding Flag Categories
+
+FFmpeg flags fall into three categories based on where they have their primary effect:
+
+| Category | Where Applied | What It Affects |
+|----------|---------------|-----------------|
+| **Camera/Hardware** | On the camera itself | USB bandwidth, camera sensor settings |
+| **Software/CPU** | During encoding on your computer | CPU load, encoding speed |
+| **Output/File** | In the output file | File size, playback compatibility |
+
+Understanding these categories helps you optimize for your specific constraints (USB bandwidth limited? CPU limited? Storage limited?).
+
+### Flag Impact Summary
+
+The following table shows all flags used in the recording script and their primary impact:
+
+| Flag | Category | USB Bandwidth | CPU Load | File Size |
+|------|----------|---------------|----------|-----------|
+| `-f v4l2` | Camera | - | - | - |
+| `-i /dev/videoX` | Camera | - | - | - |
+| `-s 1280x720` | Camera | ⬆️ Higher = more | - | ⬆️ Higher = larger |
+| `-r 30` | Camera | ⬆️ Higher = more | - | ⬆️ Higher = larger |
+| `-c:v libx264` | Software | - | ⬆️ Software encoding | ⬇️ Good compression |
+| `-preset ultrafast` | Software | - | ⬇️ Lower CPU | ⬆️ Larger files |
+| `-crf 23` | Output | - | - | ⬆️ Lower = larger |
+| `-pix_fmt yuv420p` | Output | - | - | - (compatibility) |
+| `-vf extractplanes=y` | Software | - | ⬇️ Less data to encode | ⬇️ ~50% smaller |
+
+**Legend:** ⬆️ = increases, ⬇️ = decreases, - = no significant effect
+
 ### Recording Script (parallel2video_ffmpeg.sh)
 
 The main recording command uses:
 ```bash
-ffmpeg -f v4l2 -i /dev/video0 -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p output.mp4
+ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -i /dev/video0 -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p output.mp4
 ```
 
-#### Input Flags
+#### Camera/Hardware Flags (Affect USB Bandwidth)
 
-| Flag | Value | Description | Alternatives |
-|------|-------|-------------|--------------|
-| `-f v4l2` | v4l2 | Video4Linux2 input format for Linux webcams | `-f dshow` (Windows), `-f avfoundation` (macOS) |
-| `-i` | /dev/videoX | Input device path | Use `v4l2-ctl --list-devices` to find available devices |
-| `-s` | 1280x720 | Input resolution (720p) | `640x480` (lower bandwidth), `1920x1080` (higher quality) |
-| `-r` | 30 | Frame rate in fps | `15` (lower bandwidth), `60` (smoother motion) |
+These flags configure what the camera captures and sends over USB. They directly affect USB bandwidth consumption.
 
-#### Encoding Flags
+| Flag | Value | Description | USB Bandwidth Impact | Alternatives |
+|------|-------|-------------|---------------------|--------------|
+| `-f v4l2` | v4l2 | Video4Linux2 input format | None (just specifies driver) | `-f dshow` (Windows), `-f avfoundation` (macOS) |
+| `-i` | /dev/videoX | Input device path | None | Use `v4l2-ctl --list-devices` to find devices |
+| `-s` | 1280x720 | **Resolution requested from camera** | **HIGH** - 720p uses ~2.5x bandwidth of 480p | `640x480` (saves ~60% bandwidth), `1920x1080` (uses ~2.25x more) |
+| `-r` | 30 | **Frame rate requested from camera** | **HIGH** - Directly proportional to bandwidth | `15` (halves bandwidth), `60` (doubles bandwidth) |
 
-| Flag | Value | Description | Why Selected | Alternatives |
-|------|-------|-------------|--------------|--------------|
-| `-c:v libx264` | libx264 | H.264 software encoder | Widely compatible, good compression | `libx265` (better compression, slower), `h264_nvenc` (NVIDIA GPU), `h264_vaapi` (Intel GPU) |
-| `-preset ultrafast` | ultrafast | Encoding speed preset | Minimizes CPU load during real-time recording | `superfast`, `veryfast`, `faster`, `fast`, `medium`, `slow`, `slower`, `veryslow` (slower = better compression) |
-| `-crf` | 23 | Constant Rate Factor (quality) | Balanced quality/size; 0=lossless, 51=worst | `18` (high quality), `28` (smaller files), `0` (lossless) |
-| `-pix_fmt yuv420p` | yuv420p | Pixel format | Maximum compatibility with players | `yuv444p` (better color), `gray` (grayscale) |
+**USB Bandwidth Calculation:**
+```
+Bandwidth = Width × Height × Bytes_per_pixel × FPS
+Example: 1280 × 720 × 2 (YUYV) × 30 = 55.3 MB/s per camera
+```
+
+USB 2.0 practical limit is ~53 MB/s total, so 720p30 in raw format can only support 1 camera per USB controller. Use MJPEG input mode (`-input_format mjpeg`) to reduce this significantly.
+
+#### Software/CPU Flags (Affect CPU Load)
+
+These flags control how ffmpeg processes and encodes the video on your CPU. They don't affect what the camera sends.
+
+| Flag | Value | Description | CPU Impact | Alternatives |
+|------|-------|-------------|------------|--------------|
+| `-c:v libx264` | libx264 | **Software H.264 encoder** | **HIGH** - All encoding done on CPU | `h264_nvenc` (NVIDIA GPU, very low CPU), `h264_vaapi` (Intel GPU), `h264_qsv` (Intel QuickSync) |
+| `-preset ultrafast` | ultrafast | **Encoding speed/quality tradeoff** | **Selected for LOW CPU** - Fastest encoding | `superfast` → `veryslow` (slower = more CPU, better compression) |
+| `-vf extractplanes=y` | y | Extract luminance only | **REDUCES** - Less data to encode | Full color (more CPU), other planes |
+| `-use_wallclock_as_timestamps 1` | 1 | Use system clock for timestamps | Minimal | Default timestamps |
+| `-copyts` | - | Preserve timestamps | Minimal | - |
+
+**CPU Load by Preset (approximate for 720p30):**
+| Preset | CPU Usage | File Size |
+|--------|-----------|-----------|
+| ultrafast | ~15% | 1.0x (baseline) |
+| superfast | ~20% | 0.9x |
+| veryfast | ~30% | 0.8x |
+| faster | ~40% | 0.7x |
+| medium | ~60% | 0.6x |
+| slow | ~80% | 0.55x |
+| veryslow | ~100% | 0.5x |
+
+#### Output/File Flags (Affect File Size and Compatibility)
+
+These flags control the output file characteristics. They don't affect USB bandwidth or significantly affect CPU (except indirectly through compression).
+
+| Flag | Value | Description | File Size Impact | Alternatives |
+|------|-------|-------------|------------------|--------------|
+| `-crf` | 23 | **Constant Rate Factor (quality)** | **DIRECT** - Lower = larger, higher quality | `18` (visually lossless, ~2x size), `28` (smaller, lower quality), `0` (lossless, huge) |
+| `-pix_fmt yuv420p` | yuv420p | Pixel format in output | Minimal (standard) | `yuv444p` (better color, larger), `gray` (grayscale, smaller) |
+
+**CRF Guidelines:**
+| CRF | Quality | Typical Use Case | Relative Size |
+|-----|---------|------------------|---------------|
+| 0 | Lossless | Archival master | 10-50x |
+| 18 | Visually lossless | High-quality archival | 2x |
+| 23 | Good (default) | General recording | 1x |
+| 28 | Acceptable | Storage-constrained | 0.5x |
+| 35+ | Low | Previews only | 0.25x |
 
 #### Single Channel Recording (extractplanes filter)
 
@@ -204,11 +276,32 @@ When single-channel mode is enabled:
 ffmpeg ... -vf "extractplanes=y" ...
 ```
 
-| Flag | Value | Description | Why Selected |
-|------|-------|-------------|--------------|
-| `-vf extractplanes=y` | y | Extract Y (luminance) plane only | Reduces data by ~50%, useful when color is not needed (e.g., tracking applications) |
+| Flag | Value | Description | Category | Impact |
+|------|-------|-------------|----------|--------|
+| `-vf extractplanes=y` | y | Extract Y (luminance) plane only | Software | Reduces CPU load and file size by ~50% |
+
+**Why use single channel?**
+- Color information is often unnecessary for tracking/DeepLabCut applications
+- Reduces encoding workload (CPU impact)
+- Reduces file size by approximately 50%
+- Does NOT reduce USB bandwidth (camera still sends full color)
 
 **Alternative plane options:** `u`, `v` (chrominance), `r`, `g`, `b`, `a` (RGBA components)
+
+#### Reducing USB Bandwidth (MJPEG Input Mode)
+
+If you're hitting USB bandwidth limits with multiple cameras, you can request MJPEG format from the camera:
+
+```bash
+ffmpeg -f v4l2 -input_format mjpeg -i /dev/video0 ...
+```
+
+| Flag | Value | USB Bandwidth Impact |
+|------|-------|---------------------|
+| `-input_format mjpeg` | mjpeg | **Reduces by 5-10x** - Camera compresses before sending |
+| (default) | yuyv422 | Full uncompressed - highest bandwidth |
+
+**Trade-off:** MJPEG input adds a decode step (slight CPU increase) but dramatically reduces USB bandwidth, allowing more cameras per USB controller.
 
 ### Conversion Script (convert_files_gui.sh)
 
@@ -269,25 +362,58 @@ streamer -q -c /dev/video0 -s 1280x720 -f jpeg -t 324000 -r 30 -j 75 -w 0 -o out
 
 ### Choosing the Right Settings
 
-#### For Real-time Recording
-- Use `-preset ultrafast` to minimize CPU load
-- Use `-crf 23` for balanced quality
-- Consider single-channel mode if color is not needed
+Use this decision guide based on your primary constraint:
 
-#### For Post-processing/Archival
-- Use `-preset slow` or `veryslow` for better compression
-- Use `-crf 18` for higher quality
-- Use `-b:v` for predictable file sizes
+#### If USB Bandwidth Limited (multiple cameras, dropped frames)
 
-#### For Multi-camera Setups
-- Monitor USB bandwidth (see docs/FFmpeg_Multi-Camera_DeepLabCut_Optimization.md)
-- Consider MJPEG input mode to reduce USB bandwidth
-- Use hardware encoding if available (`h264_nvenc`, `h264_vaapi`)
+**Symptoms:** Frames dropping, "select timeout" errors, cameras disconnecting
+
+**Solutions (in order of effectiveness):**
+1. Use MJPEG input: `-input_format mjpeg` (reduces bandwidth 5-10x)
+2. Lower resolution: `-s 640x480` instead of 720p
+3. Lower frame rate: `-r 15` instead of 30
+4. Add USB controllers (PCIe expansion cards)
+5. Distribute cameras across different USB controllers
+
+#### If CPU Limited (encoding can't keep up)
+
+**Symptoms:** High CPU usage, encoding warnings, growing latency
+
+**Solutions (in order of effectiveness):**
+1. Use hardware encoding: `-c:v h264_nvenc` (NVIDIA) or `-c:v h264_vaapi` (Intel)
+2. Use fastest preset: `-preset ultrafast` (already default)
+3. Use single-channel mode: `-vf extractplanes=y`
+4. Lower resolution (reduces pixels to encode)
+
+#### If Storage Limited (running out of disk space)
+
+**Symptoms:** Disk filling up quickly, need longer recordings
+
+**Solutions (in order of effectiveness):**
+1. Use single-channel mode: `-vf extractplanes=y` (~50% reduction)
+2. Increase CRF: `-crf 28` instead of 23 (~50% reduction)
+3. Use slower preset (if CPU allows): `-preset medium` (~40% reduction)
+4. Lower resolution: `-s 640x480` (~75% reduction from 720p)
+5. Lower frame rate: `-r 15` (~50% reduction)
+
+#### Quick Reference: Flag Changes by Constraint
+
+| Constraint | Flag to Change | From | To | Effect |
+|------------|---------------|------|-----|--------|
+| USB bandwidth | `-input_format` | (none) | `mjpeg` | -80% bandwidth |
+| USB bandwidth | `-s` | `1280x720` | `640x480` | -60% bandwidth |
+| USB bandwidth | `-r` | `30` | `15` | -50% bandwidth |
+| CPU load | `-c:v` | `libx264` | `h264_nvenc` | -90% CPU |
+| CPU load | `-vf` | (none) | `extractplanes=y` | -30% CPU |
+| File size | `-crf` | `23` | `28` | -50% size |
+| File size | `-vf` | (none) | `extractplanes=y` | -50% size |
+| File size | `-preset` | `ultrafast` | `medium` | -40% size |
 
 #### For DeepLabCut/Tracking Applications
 - Single-channel (Y plane) recording reduces file size without losing tracking accuracy
 - Lower resolutions (640x480) may be sufficient and reduce bandwidth
 - Consistent frame rate is more important than high resolution
+- MJPEG input mode is recommended for multi-camera setups
 
 ## Notes
 
