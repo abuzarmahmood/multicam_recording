@@ -14,6 +14,7 @@ Options:
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/recording_utils.sh"
+source "$SCRIPT_DIR/ramdisk_utils.sh"
 
 # Function to handle Ctrl+C - ensures timestamps are extracted before exit
 cleanup_on_interrupt() {
@@ -37,6 +38,15 @@ cleanup_on_interrupt() {
             echo "Timestamps saved to ${timestamps_file}" 
         fi
     done
+    
+    # Move files from ramdisk to final destination if ramdisk was used
+    if [ "$RAMDISK_ACTIVE" -eq 1 ] && [ -n "$FINAL_OUTPUT_DIR" ]; then
+        move_from_ramdisk "$(pwd)" "$FINAL_OUTPUT_DIR"
+        cd "$FINAL_OUTPUT_DIR"
+    fi
+    
+    # Cleanup ramdisk
+    cleanup_ramdisk "$SCRIPT_DIR"
     
     echo "Recording and timestamp extraction complete!" >&2
     exit 0
@@ -63,8 +73,23 @@ generate_recording_name
 # Duration set to very large number, script is killed to stop recording
 duration=180
 
-# Setup recording directory
-setup_recording_directory "$output_dir" "$fin_name"
+# Setup ramdisk if enabled
+setup_ramdisk "$SCRIPT_DIR"
+FINAL_OUTPUT_DIR="$output_dir/$fin_name"
+
+# Get recording path (ramdisk or disk)
+recording_path=$(get_recording_path "$output_dir" "$fin_name")
+
+# Setup recording directory (use ramdisk path if available)
+mkdir -p "$recording_path"
+cd "$recording_path"
+
+if [ "$RAMDISK_ACTIVE" -eq 1 ]; then
+    echo "Recording to ramdisk: $recording_path"
+    echo "Final destination: $FINAL_OUTPUT_DIR"
+else
+    echo "Recording to disk: $recording_path"
+fi
 
 # Build device list for parallel execution
 build_device_list
@@ -98,9 +123,24 @@ trap - SIGINT
 stop_recording "$time_file"
 
 # Extract timestamps from recorded video files
-# If not interrupted, extract timestamps here
-if [ $? -eq 0 ]; then
-    cleanup_on_interrupt
+echo "Extracting timestamps from video files..."
+for i in $(seq 0 $((NUM_CAMERAS - 1))); do
+    video_file="name_cam${i}.mp4"
+    timestamps_file="cam${i}_timestamps.txt"
+    if [ -f $video_file ]; then
+        echo "Extracting timestamps from ${video_file}..." 
+        ffmpeg -i $video_file -f mkvtimestamp_v2 -copyts $timestamps_file 2>/dev/null
+        echo "Timestamps saved to ${timestamps_file}" 
+    fi
+done
+
+# Move files from ramdisk to final destination if ramdisk was used
+if [ "$RAMDISK_ACTIVE" -eq 1 ] && [ -n "$FINAL_OUTPUT_DIR" ]; then
+    move_from_ramdisk "$(pwd)" "$FINAL_OUTPUT_DIR"
+    cd "$FINAL_OUTPUT_DIR"
 fi
+
+# Cleanup ramdisk
+cleanup_ramdisk "$SCRIPT_DIR"
 
 echo "Recording and timestamp extraction complete!"
