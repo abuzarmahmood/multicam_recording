@@ -55,7 +55,9 @@ pip install opencv-python numpy matplotlib tqdm moviepy
 chmod +x parallel2video_ffmpeg.sh
 chmod +x parallel2video_streamer.sh
 chmod +x convert_files_gui.sh
-chmod +x combine_utils/combine_videos_gui.sh
+chmod +x postprocessing/transcode_copy_videos.sh
+chmod +x postprocessing/transcode_copy_videos_gui.sh
+chmod +x postprocessing/combine_utils/combine_videos_gui.sh
 ```
 
 ## Usage Pipeline
@@ -63,7 +65,7 @@ chmod +x combine_utils/combine_videos_gui.sh
 1) parallel2video_ffmpeg.sh (or parallel2video_streamer.sh for legacy systems)
 |
 V
-2) convert_files_gui.sh
+2) convert_files_gui.sh (or postprocessing/transcode_copy_videos_gui.sh for -c:v copy videos)
 |
 V
 3) split_script.py
@@ -91,26 +93,57 @@ V
 - Compresses file to a smaller bitrate to save on space
 - Provides a GUI interface to select files for conversion (requires zenity)
 
+### Alternative Step 2: Transcode videos recorded with -c:v copy using postprocessing/transcode_copy_videos_gui.sh
+- **NEW**: Specifically designed to handle videos recorded with `-c:v copy` flag (uncompressed videos)
+- Automatically detects videos that were recorded without compression
+- Provides multiple quality presets (low, medium, high, ultra) for compression
+- Shows before/after file size comparison and compression ratio
+- Supports batch processing with parallel execution for faster processing
+- Preserves original timestamps and metadata
+- Provides both GUI and command-line interfaces
+- Uses efficient H.264 encoding to significantly reduce file size while maintaining quality
+
+**Command Line Usage:**
+```bash
+# Basic usage
+./postprocessing/transcode_copy_videos.sh video1.mp4 video2.mp4
+
+# With quality preset
+./postprocessing/transcode_copy_videos.sh --quality high *.mp4
+
+# Custom settings
+./postprocessing/transcode_copy_videos.sh --crf 20 --preset slow video.mp4
+
+# GUI mode
+./postprocessing/transcode_copy_videos_gui.sh
+```
+
+**Quality Presets:**
+- `low` - CRF 28, fast preset (smaller files, faster processing)
+- `medium` - CRF 23, medium preset (balanced quality/size)
+- `high` - CRF 18, slow preset (better quality, smaller files)
+- `ultra` - CRF 15, veryslow preset (best quality, smallest files)
+
 ### Step 3: Split video using split_script.py
 - Split video according to a file marking the start and end of the videos
 - Another file marks the starting point of every trial
 - Run with: `python split_script.py -h` for usage instructions
 
-### Step 4: Combine videos using combine_utils/ (NEW)
+### Step 4: Combine videos using postprocessing/combine_utils/ (NEW)
 - Combine multiple videos into a single frame showing all videos simultaneously
-- Use `combine_utils/combine_videos_gui.sh` for GUI interface or `combine_utils/combine_videos.py` for command line
+- Use `postprocessing/combine_utils/combine_videos_gui.sh` for GUI interface or `postprocessing/combine_utils/combine_videos.py` for command line
 - Supports various grid layouts (auto, 2x1, 1x2, 2x2, 3x1, 1x3)
 - Adjustable quality settings and video scaling
 - Uses ffmpeg for efficient video processing
 
 **Command Line Usage:**
 ```bash
-python3 combine_utils/combine_videos.py video1.avi video2.avi -o combined.mp4 --grid 2x1 --quality high
+python3 postprocessing/combine_utils/combine_videos.py video1.avi video2.avi -o combined.mp4 --grid 2x1 --quality high
 ```
 
 **GUI Usage:**
 ```bash
-./combine_utils/combine_videos_gui.sh
+./postprocessing/combine_utils/combine_videos_gui.sh
 ```
 
 ## Hardware Requirements
