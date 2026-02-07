@@ -1,4 +1,5 @@
 #!/bin/bash
+# ffmpeg -i name_cam0.mp4 -c:v libx264 -crf 23 -vf scale=960:-1 name_cam0_coded.mp4
 
 : '
 Simple script to transcode MP4 files in a directory
