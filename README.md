@@ -57,6 +57,7 @@ chmod +x parallel2video_streamer.sh
 chmod +x convert_files_gui.sh
 chmod +x postprocessing/transcode_copy_videos.sh
 chmod +x postprocessing/transcode_copy_videos_gui.sh
+chmod +x postprocessing/transcode_simple.sh
 chmod +x postprocessing/combine_utils/combine_videos_gui.sh
 ```
 
@@ -123,6 +124,26 @@ V
 - `medium` - CRF 23, medium preset (balanced quality/size)
 - `high` - CRF 18, slow preset (better quality, smaller files)
 - `ultra` - CRF 15, veryslow preset (best quality, smallest files)
+
+### Simple Transcoding: postprocessing/transcode_simple.sh
+- **NEW**: Simple script for basic video compression and scaling
+- Finds all MP4 files in a directory (excluding files already containing "coded" in filename)
+- Compresses videos using H.264 with CRF 23 and scales to 960px width
+- Saves transcoded files to a "coded" subdirectory with "_coded" suffix
+- Shows file size comparison before and after compression
+- Ideal for quick batch processing of recorded videos
+
+**Usage:**
+```bash
+# Process current directory
+./postprocessing/transcode_simple.sh
+
+# Process specific directory
+./postprocessing/transcode_simple.sh /path/to/videos
+
+# Show help
+./postprocessing/transcode_simple.sh --help
+```
 
 ### Step 3: Split video using split_script.py
 - Split video according to a file marking the start and end of the videos
