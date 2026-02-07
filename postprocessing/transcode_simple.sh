@@ -16,7 +16,7 @@ Simple video transcoding script that:
 - Finds all .mp4 files in the specified directory (or current directory)
 - Skips files that already have "coded" in their filename
 - Compresses them using H.264 with CRF 23 and scales to 960px width
-- Adds "_coded" suffix to output filename
+- Saves transcoded files to a "coded" subdirectory with "_coded" suffix
 
 EXAMPLES:
     $0                    # Process current directory
@@ -30,7 +30,13 @@ transcode_video() {
     local input_file="$1"
     local dir=$(dirname "$input_file")
     local basename=$(basename "$input_file" .mp4)
-    local output_file="$dir/${basename}_coded.mp4"
+    local coded_dir="$dir/coded"
+    local output_file="$coded_dir/${basename}_coded.mp4"
+    
+    # Create coded subdirectory if it doesn't exist
+    if [[ ! -d "$coded_dir" ]]; then
+        mkdir -p "$coded_dir"
+    fi
     
     # Skip if output file already exists
     if [[ -f "$output_file" ]]; then
