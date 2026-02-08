@@ -14,5 +14,10 @@
   "video_devices": [
     "/dev/video0",
     "/dev/video1"
-  ]
+  ],
+  "ramdisk": {
+    "enabled": false,
+    "path": "/tmp/multicam_ramdisk",
+    "size_gb": 4
+  }
 }
