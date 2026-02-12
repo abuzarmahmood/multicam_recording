@@ -73,11 +73,19 @@ build_device_list
 echo -n "Record single channel (Y/luminance only) for better performance? (y/n): "
 read single_channel
 
+# Ask for copy mode option (no transcoding, faster but no scaling/luminance extraction)
+echo -n "Use copy mode (-c:v copy) for faster recording? (y/n): "
+read copy_mode
+
 # Generate string to be evaluated using ffmpeg for video recording
 # Uses -use_wallclock_as_timestamps 1 to save wall-clock timestamps in video files
 if [[ "$single_channel" =~ ^[Yy]$ ]]; then
     echo "Recording single channel (Y/luminance only) for better performance..."
     exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -i {2} -s 1280x720 -r 30 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
+elif [[ "$copy_mode" =~ ^[Yy]$ ]]; then
+    echo "Recording with copy mode (-c:v copy) - no transcoding, faster capture but no scaling or luminance extraction..."
+    # Note: -c:v copy skips encoding, but we still need v4l2 for input and can't apply filters
+    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -i {2} -r 30 -c:v copy name_cam{1}.mp4"
 else
     echo "Recording full color video..."
     exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"

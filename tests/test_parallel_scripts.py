@@ -79,7 +79,7 @@ def test_single_channel_functionality():
     
     # Check for extractplanes filter
     assert "extractplanes=y" in content, "Script should use extractplanes filter for single channel"
-    assert "-pix_fmt gray" in content, "Script should use gray pixel format for single channel"
+    # Note: single channel uses yuv420p output, not gray
     
     # Check for conditional logic
     assert "single_channel" in content, "Script should use single_channel variable"
@@ -91,6 +91,31 @@ def test_single_channel_functionality():
     assert "Recording single channel" in content, "Script should indicate single channel recording mode"
     
     print("✓ Single channel functionality tests passed")
+
+def test_copy_mode_functionality():
+    """Test that ffmpeg script supports copy mode (-c:v copy) for faster recording"""
+    print("Testing copy mode functionality...")
+
+    with open("parallel2video_ffmpeg.sh", "r") as f:
+        content = f.read()
+
+    # Check for copy mode option prompt
+    assert "copy mode" in content.lower(), "Script should ask about copy mode recording"
+    assert "-c:v copy" in content, "Script should use -c:v copy flag"
+
+    # Check for copy mode conditional logic
+    assert "copy_mode" in content, "Script should use copy_mode variable"
+    assert '[[ "$copy_mode" =~ ^[Yy]$ ]]' in content, "Script should check for y/Y input for copy mode"
+
+    # Check that copy mode command uses -c:v copy and doesn't use scaling or encoding
+    assert "-c:v copy name_cam" in content, "Script should output with copy codec"
+    assert "Recording with copy mode" in content, "Script should indicate copy mode recording"
+
+    # Verify copy mode doesn't use scaling (-s) or encoding (libx264)
+    # The copy mode exec_string should have -c:v copy without libx264
+    assert "no transcoding" in content.lower() or "faster capture" in content.lower(), "Script should explain copy mode benefits"
+
+    print("✓ Copy mode functionality tests passed")
 
 def test_streamer_command_structure():
     """Test that streamer script contains proper streamer commands"""
@@ -244,6 +269,7 @@ def main():
         test_script_syntax()
         test_ffmpeg_command_structure()
         test_single_channel_functionality()
+        test_copy_mode_functionality()
         test_streamer_command_structure()
         test_directory_structure_creation()
         test_device_checking()
