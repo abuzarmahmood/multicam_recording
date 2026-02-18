@@ -260,6 +260,32 @@ def test_readme_updated():
     
     print("✓ README update tests passed")
 
+def test_ffmpeg_logging():
+    """Test that ffmpeg script logs output to a log file in the recording directory"""
+    print("Testing ffmpeg logging functionality...")
+    
+    with open(script_dir / "parallel2video_ffmpeg.sh", "r") as f:
+        content = f.read()
+    
+    # Check for log file variable
+    assert "_ffmpeg.log" in content, "Script should define log file with _ffmpeg.log suffix"
+    assert "log_file=" in content, "Script should define log_file variable"
+    
+    # Check for tee command usage
+    assert "tee" in content, "Script should use tee command for logging"
+    
+    # Check that log file is written to the recording directory
+    # The log file should use ${fin_name}_ffmpeg.log pattern
+    assert '${fin_name}_ffmpeg.log' in content, "Log file should be in the recording directory with ${fin_name}_ffmpeg.log name"
+    
+    # Check that stderr and stdout are captured
+    assert "2>&1" in content, "Script should redirect stderr to stdout for logging"
+    
+    # Check PIPESTATUS is used to capture exit status properly
+    assert "PIPESTATUS" in content, "Script should use PIPESTATUS to capture exit status from pipe"
+    
+    print("✓ FFmpeg logging tests passed")
+
 def main():
     """Run all tests"""
     print("Running parallel recording scripts tests...\n")
@@ -276,6 +302,7 @@ def main():
         test_config_has_video_devices()
         test_script_differences()
         test_readme_updated()
+        test_ffmpeg_logging()
         
         print("\n✓ All tests passed! The parallel recording scripts are working correctly.")
         return 0

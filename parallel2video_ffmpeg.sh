@@ -92,12 +92,19 @@ else
 fi
 
 time_file="${fin_name}_markers.txt"
+log_file="${fin_name}_ffmpeg.log"
 
 # Start recording with marker
 start_recording "$time_file"
 
-# Execute video recording
-eval $exec_string
+# Execute video recording with logging
+# Use tee with stdout/stderr redirect and capture exit status via PIPESTATUS
+eval "$exec_string" 2>&1 | tee -a "$log_file" &
+PID=$!
+
+# Wait for the pipeline to complete
+wait $PID
+exit_status=$?
 
 # Disable trap for normal exit to avoid duplicate cleanup
 trap - SIGINT
@@ -107,7 +114,7 @@ stop_recording "$time_file"
 
 # Extract timestamps from recorded video files
 # If not interrupted, extract timestamps here
-if [ $? -eq 0 ]; then
+if [ $exit_status -eq 0 ]; then
     cleanup_on_interrupt
 fi
 
