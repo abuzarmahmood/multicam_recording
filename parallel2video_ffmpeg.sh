@@ -97,10 +97,14 @@ log_file="${fin_name}_ffmpeg.log"
 # Start recording with marker
 start_recording "$time_file"
 
-# Execute video recording with tee to log stderr + stdout
-# Use tee directly - the output will go to both terminal and file in real-time
-eval "$exec_string" 2>&1 | tee "$log_file"
-exit_status=${PIPESTATUS[0]}
+# Execute video recording with logging
+# Use tee with stdout/stderr redirect and capture exit status via PIPESTATUS
+eval "$exec_string" 2>&1 | tee -a "$log_file" &
+PID=$!
+
+# Wait for the pipeline to complete
+wait $PID
+exit_status=$?
 
 # Disable trap for normal exit to avoid duplicate cleanup
 trap - SIGINT
