@@ -98,8 +98,8 @@ log_file="${fin_name}_ffmpeg.log"
 start_recording "$time_file"
 
 # Execute video recording with tee to log stderr + stdout
-# Use bash pipe to capture exit status of eval (the first command in pipeline)
-eval "$exec_string" 2>&1 | tee "$log_file"
+# Use a group command to ensure eval's output is properly piped to tee
+{ eval "$exec_string"; } 2>&1 | tee "$log_file"
 exit_status=${PIPESTATUS[0]}
 
 # Disable trap for normal exit to avoid duplicate cleanup
