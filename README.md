@@ -79,6 +79,7 @@ V
 - Outputs MP4 files with H.264 encoding for better compatibility and quality
 - Uses ffmpeg for modern video processing
 - **NEW**: Option to record single channel (Y/luminance only) for better performance using extractplanes filter
+- **NEW**: Option to use `-c:v copy` mode for faster recording (no transcoding, but no scaling or luminance extraction)
 
 ### Alternative: parallel2video_streamer.sh (Legacy)
 - Automatically checks disk space before starting recording
