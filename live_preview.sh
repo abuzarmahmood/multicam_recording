@@ -78,7 +78,7 @@ echo "Grid layout: ${GRID_ROWS}x${GRID_COLS} for $NUM_CAMERAS camera(s)"
 # Single camera: play directly with ffplay
 if [ "$NUM_CAMERAS" -eq 1 ]; then
     echo "Playing live preview from ${AVAILABLE_DEVICES[0]}..."
-    exec ffplay -f v4l2 -video_size 1280x720 -framerate 30 \
+    exec ffplay -f v4l2 -input_format mjpeg -video_size 1280x720 -framerate 30 \
         -i "${AVAILABLE_DEVICES[0]}" \
         -window_title "Live Preview - ${AVAILABLE_DEVICES[0]}"
 fi
