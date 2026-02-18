@@ -58,7 +58,7 @@ def test_ffmpeg_command_structure():
     assert "-f v4l2" in content, "Script should use v4l2 format for Linux cameras"
     assert "-i {2}" in content, "Script should reference video devices dynamically"
     assert "-s 1280x720" in content, "Script should set video resolution"
-    assert "-r 30" in content, "Script should set frame rate"
+    assert "-framerate 30" in content, "Script should set frame rate"
     assert "libx264" in content, "Script should use H.264 encoding"
     assert "-preset ultrafast" in content, "Script should use ultrafast preset for low latency"
     assert "-crf 23" in content, "Script should set quality level"
