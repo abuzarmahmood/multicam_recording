@@ -88,7 +88,7 @@ fi
 # Build ffmpeg input arguments
 INPUT_ARGS=()
 for device in "${AVAILABLE_DEVICES[@]}"; do
-    INPUT_ARGS+=(-f v4l2 -video_size 1280x720 -framerate 30 -i "$device")
+    INPUT_ARGS+=(-f v4l2 -input_format mjpeg -video_size 1280x720 -framerate 30 -i "$device")
 done
 
 # Build filter_complex
