@@ -11,7 +11,7 @@ Uses copy mode (-c:v copy) for faster recording without transcoding
 '
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/recording_utils.sh"
+source "$SCRIPT_DIR/utils/recording_utils.sh"
 
 # Function to transcode recorded videos
 transcode_videos() {

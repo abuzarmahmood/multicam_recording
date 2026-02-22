@@ -9,7 +9,7 @@ Uses the same device loading logic as the recording scripts via recording_utils.
 '
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/recording_utils.sh"
+source "$SCRIPT_DIR/utils/recording_utils.sh"
 
 # Help flag
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then

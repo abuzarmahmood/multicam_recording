@@ -119,7 +119,7 @@ setup_output_directory() {
 
     # Check disk space before starting recording
     echo "Checking disk space..."
-    python3 "$script_dir/disk_space_check.py" --path "$output_dir"
+    python3 "$script_dir/utils/disk_space_check.py" --path "$output_dir"
     if [ $? -ne 0 ]; then
         echo "❌ Disk space check failed. Please free up disk space and try again."
         return 1
