@@ -463,7 +463,7 @@ The following table shows all flags used in the recording script and their prima
 | `-pix_fmt yuv420p` | Output | - | - | - (compatibility) |
 | `-vf extractplanes=y` | Software | - | ⬇️ Less data to encode | ⬇️ ~50% smaller |
 
-**Legend:** ⬆️ = increases, ⬇️ = decreases, - = no significant effect
+> **Legend:** ⬆️ = increases, ⬇️ = decreases, - = no significant effect
 
 ---
 
@@ -721,7 +721,9 @@ streamer -q -c /dev/video0 -s 1280x720 -f jpeg -t 324000 -r 30 -j 75 -w 0 -o out
 | Transcoding quality | `-crf 23` | Balanced quality/size | `-crf 18` (larger) or `-crf 28` (smaller) |
 | Transcoding resolution | `scale=960:-1` | 960px width | `scale=1280:-1` (larger) or `scale=640:-1` (smaller) |
 
-#### For DeepLabCut/Tracking Applications
+---
+
+## 🎯 For DeepLabCut/Tracking Applications
 - ✓ **Already optimized**: Script uses MJPEG input for reduced USB bandwidth
 - ✓ **Already optimized**: Copy mode during recording ensures no dropped frames
 - ✓ **Already optimized**: Automatic transcoding compresses files after recording
