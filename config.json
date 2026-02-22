@@ -2,10 +2,9 @@
   "disk_space": {
     "min_free_space_gb": 20
   },
-  "recording": {
-    "num_cameras": 2
-  },
   "video_devices": [
-    "/dev/video0"
+    "/dev/video0",
+    "/dev/video2",
+    "/dev/video4"
   ]
 }
