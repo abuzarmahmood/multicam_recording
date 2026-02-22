@@ -76,10 +76,11 @@ V
 - Supply filename for session, time and date automatically appended to name
 - Requires 2+ cameras connected to /dev/video<123>
 - Press Ctrl+C to stop recording
-- Outputs MP4 files with H.264 encoding for better compatibility and quality
+- Uses `-c:v copy` mode for faster recording (no transcoding during capture)
+- Automatically transcodes recorded videos after recording completes
+- Transcoding compresses videos using H.264 with CRF 23 and scales to 960px width
+- Outputs MP4 files with MJPEG input format for reduced USB bandwidth
 - Uses ffmpeg for modern video processing
-- **NEW**: Option to record single channel (Y/luminance only) for better performance using extractplanes filter
-- **NEW**: Option to use `-c:v copy` mode for faster recording (no transcoding, but no scaling or luminance extraction)
 
 ### Alternative: parallel2video_streamer.sh (Legacy)
 - Automatically checks disk space before starting recording
@@ -89,14 +90,16 @@ V
 
 **Note:** Input device numbers are hardcoded and may not be correct, use `v4l2-ctl --list-devices` to adjust
 
-### Step 2: Convert output video files using convert_files_gui.sh
+### Step 2: Convert output video files using convert_files_gui.sh (Optional)
 - When using parallel2video_streamer.sh: This step uses ffmpeg to get rid of a bug which prevents counting the total number of frames in the original AVI files
-- When using parallel2video_ffmpeg.sh: This step may be optional as the files are already in MP4 format, but can be used for further compression
-- Compresses file to a smaller bitrate to save on space
+- When using parallel2video_ffmpeg.sh: This step is now **optional** as automatic transcoding happens after recording
+- The automatic transcoding after recording compresses files using H.264 CRF 23 and scales to 960px width
+- If you skipped automatic transcoding (Ctrl+C during transcoding), you can use this GUI tool or the transcode scripts below
 - Provides a GUI interface to select files for conversion (requires zenity)
 
-### Alternative Step 2: Transcode videos recorded with -c:v copy using postprocessing/transcode_copy_videos_gui.sh
-- **NEW**: Specifically designed to handle videos recorded with `-c:v copy` flag (uncompressed videos)
+### Alternative Step 2: Transcode videos using postprocessing/transcode_copy_videos_gui.sh
+- Specifically designed to handle videos recorded with `-c:v copy` flag
+- **Note**: parallel2video_ffmpeg.sh now automatically transcodes after recording, so this is only needed if you skipped that step
 - Automatically detects videos that were recorded without compression
 - Provides multiple quality presets (low, medium, high, ultra) for compression
 - Shows before/after file size comparison and compression ratio
@@ -127,12 +130,13 @@ V
 - `ultra` - CRF 15, veryslow preset (best quality, smallest files)
 
 ### Simple Transcoding: postprocessing/transcode_simple.sh
-- **NEW**: Simple script for basic video compression and scaling
+- Simple script for basic video compression and scaling
+- **Note**: parallel2video_ffmpeg.sh now uses similar automatic transcoding after recording
 - Finds all MP4 files in a directory (excluding files already containing "coded" in filename)
 - Compresses videos using H.264 with CRF 23 and scales to 960px width
 - Saves transcoded files to a "coded" subdirectory with "_coded" suffix
 - Shows file size comparison before and after compression
-- Ideal for quick batch processing of recorded videos
+- Ideal for quick batch processing of recorded videos or re-transcoding with different settings
 
 **Usage:**
 ```bash
@@ -259,9 +263,16 @@ The following table shows all flags used in the recording script and their prima
 
 ### Recording Script (parallel2video_ffmpeg.sh)
 
-The main recording command uses:
+The main recording command uses copy mode for fast capture, then transcodes after recording:
+
+**During Recording (copy mode - no transcoding):**
 ```bash
-ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -i /dev/video0 -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p output.mp4
+ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -input_format mjpeg -i /dev/video0 -r 60 -c:v copy output.mp4
+```
+
+**After Recording (automatic transcoding):**
+```bash
+ffmpeg -i output.mp4 -c:v libx264 -crf 23 -vf scale=960:-1 output_coded.mp4
 ```
 
 #### Camera/Hardware Flags (Affect USB Bandwidth)
@@ -271,9 +282,9 @@ These flags configure what the camera captures and sends over USB. They directly
 | Flag | Value | Description | USB Bandwidth Impact | Alternatives |
 |------|-------|-------------|---------------------|--------------|
 | `-f v4l2` | v4l2 | Video4Linux2 input format | None (just specifies driver) | `-f dshow` (Windows), `-f avfoundation` (macOS) |
+| `-input_format mjpeg` | mjpeg | **Request MJPEG from camera** | **LOW** - Camera compresses before sending (5-10x reduction) | `yuyv422` (default, uncompressed, high bandwidth) |
 | `-i` | /dev/videoX | Input device path | None | Use `v4l2-ctl --list-devices` to find devices |
-| `-s` | 1280x720 | **Resolution requested from camera** | **HIGH** - 720p uses ~2.5x bandwidth of 480p | `640x480` (saves ~60% bandwidth), `1920x1080` (uses ~2.25x more) |
-| `-r` | 30 | **Frame rate requested from camera** | **HIGH** - Directly proportional to bandwidth | `15` (halves bandwidth), `60` (doubles bandwidth) |
+| `-r` | 60 | **Frame rate requested from camera** | **MEDIUM** - With MJPEG compression | `30` (halves bandwidth), `15` (quarters bandwidth) |
 
 **USB Bandwidth Calculation:**
 ```
@@ -287,13 +298,19 @@ USB 2.0 practical limit is ~53 MB/s total, so 720p30 in raw format can only supp
 
 These flags control how ffmpeg processes and encodes the video on your CPU. They don't affect what the camera sends.
 
+**During Recording (copy mode):**
 | Flag | Value | Description | CPU Impact | Alternatives |
 |------|-------|-------------|------------|--------------|
-| `-c:v libx264` | libx264 | **Software H.264 encoder** | **HIGH** - All encoding done on CPU | `h264_nvenc` (NVIDIA GPU, very low CPU), `h264_vaapi` (Intel GPU), `h264_qsv` (Intel QuickSync) |
-| `-preset ultrafast` | ultrafast | **Encoding speed/quality tradeoff** | **Selected for LOW CPU** - Fastest encoding | `superfast` → `veryslow` (slower = more CPU, better compression) |
-| `-vf extractplanes=y` | y | Extract luminance only | **REDUCES** - Less data to encode | Full color (more CPU), other planes |
+| `-c:v copy` | copy | **Copy video stream without re-encoding** | **MINIMAL** - No encoding during capture | `libx264` (encode during capture, higher CPU) |
 | `-use_wallclock_as_timestamps 1` | 1 | Use system clock for timestamps | Minimal | Default timestamps |
 | `-copyts` | - | Preserve timestamps | Minimal | - |
+
+**After Recording (automatic transcoding):**
+| Flag | Value | Description | CPU Impact | Alternatives |
+|------|-------|-------------|------------|--------------|
+| `-c:v libx264` | libx264 | **Software H.264 encoder** | **MEDIUM** - Encoding after recording | `h264_nvenc` (NVIDIA GPU, very low CPU), `h264_vaapi` (Intel GPU) |
+| `-crf 23` | 23 | Constant Rate Factor (quality) | Standard | `18` (higher quality, more CPU), `28` (lower quality, less CPU) |
+| `-vf scale=960:-1` | 960:-1 | Scale to 960px width, maintain aspect ratio | Low | `scale=1280:-1` (larger), `scale=640:-1` (smaller) |
 
 **CPU Load by Preset (approximate for 720p30):**
 | Preset | CPU Usage | File Size |
@@ -308,12 +325,16 @@ These flags control how ffmpeg processes and encodes the video on your CPU. They
 
 #### Output/File Flags (Affect File Size and Compatibility)
 
-These flags control the output file characteristics. They don't affect USB bandwidth or significantly affect CPU (except indirectly through compression).
+**During Recording (copy mode):**
+- Output format is determined by camera's MJPEG stream
+- File size is larger (uncompressed or lightly compressed)
+- No quality loss during capture
 
+**After Recording (automatic transcoding):**
 | Flag | Value | Description | File Size Impact | Alternatives |
 |------|-------|-------------|------------------|--------------|
-| `-crf` | 23 | **Constant Rate Factor (quality)** | **DIRECT** - Lower = larger, higher quality | `18` (visually lossless, ~2x size), `28` (smaller, lower quality), `0` (lossless, huge) |
-| `-pix_fmt yuv420p` | yuv420p | Pixel format in output | Minimal (standard) | `yuv444p` (better color, larger), `gray` (grayscale, smaller) |
+| `-crf` | 23 | **Constant Rate Factor (quality)** | **DIRECT** - Lower = larger, higher quality | `18` (visually lossless, ~2x size), `28` (smaller, lower quality) |
+| `-vf scale=960:-1` | 960:-1 | Scale to 960px width | **SIGNIFICANT** - Reduces resolution and file size | `scale=1280:-1` (larger), `scale=640:-1` (smaller) |
 
 **CRF Guidelines:**
 | CRF | Quality | Typical Use Case | Relative Size |
@@ -324,39 +345,47 @@ These flags control the output file characteristics. They don't affect USB bandw
 | 28 | Acceptable | Storage-constrained | 0.5x |
 | 35+ | Low | Previews only | 0.25x |
 
-#### Single Channel Recording (extractplanes filter)
+#### Two-Stage Recording Process
 
-When single-channel mode is enabled:
+The current script uses a two-stage approach:
+
+1. **Fast Capture Stage** (`-c:v copy`):
+   - Records video without transcoding for minimal CPU load during capture
+   - Uses MJPEG input format to reduce USB bandwidth
+   - Ensures no dropped frames during recording
+   - Results in larger temporary files
+
+2. **Post-Recording Transcoding Stage**:
+   - Automatically runs after recording completes (or when Ctrl+C is pressed)
+   - Compresses videos using H.264 with CRF 23
+   - Scales videos to 960px width to reduce file size
+   - Saves transcoded files to `coded/` subdirectory with `_coded` suffix
+   - Can be skipped with Ctrl+C if you want to transcode later with different settings
+
+**Benefits of this approach:**
+- Minimizes risk of dropped frames during recording (copy mode is very fast)
+- Reduces USB bandwidth with MJPEG input format
+- Still achieves good compression through post-recording transcoding
+- Allows flexibility to skip or customize transcoding later
+
+#### USB Bandwidth Management (MJPEG Input Mode)
+
+The recording script now uses MJPEG input format by default:
+
 ```bash
-ffmpeg ... -vf "extractplanes=y" ...
-```
-
-| Flag | Value | Description | Category | Impact |
-|------|-------|-------------|----------|--------|
-| `-vf extractplanes=y` | y | Extract Y (luminance) plane only | Software | Reduces CPU load and file size by ~50% |
-
-**Why use single channel?**
-- Color information is often unnecessary for tracking/DeepLabCut applications
-- Reduces encoding workload (CPU impact)
-- Reduces file size by approximately 50%
-- Does NOT reduce USB bandwidth (camera still sends full color)
-
-**Alternative plane options:** `u`, `v` (chrominance), `r`, `g`, `b`, `a` (RGBA components)
-
-#### Reducing USB Bandwidth (MJPEG Input Mode)
-
-If you're hitting USB bandwidth limits with multiple cameras, you can request MJPEG format from the camera:
-
-```bash
-ffmpeg -f v4l2 -input_format mjpeg -i /dev/video0 ...
+ffmpeg -f v4l2 -input_format mjpeg -i /dev/video0 -r 60 -c:v copy ...
 ```
 
 | Flag | Value | USB Bandwidth Impact |
 |------|-------|---------------------|
-| `-input_format mjpeg` | mjpeg | **Reduces by 5-10x** - Camera compresses before sending |
-| (default) | yuyv422 | Full uncompressed - highest bandwidth |
+| `-input_format mjpeg` | mjpeg | **Reduces by 5-10x** - Camera compresses before sending (now default) |
+| (alternative) | yuyv422 | Full uncompressed - highest bandwidth |
 
-**Trade-off:** MJPEG input adds a decode step (slight CPU increase) but dramatically reduces USB bandwidth, allowing more cameras per USB controller.
+**Benefits:**
+- Dramatically reduces USB bandwidth, allowing more cameras per USB controller
+- Combined with `-c:v copy`, there's minimal CPU overhead during recording
+- The MJPEG stream is copied directly to file without re-encoding
+- Post-recording transcoding handles compression and scaling
 
 ### Conversion Script (convert_files_gui.sh)
 
@@ -424,51 +453,49 @@ Use this decision guide based on your primary constraint:
 **Symptoms:** Frames dropping, "select timeout" errors, cameras disconnecting
 
 **Solutions (in order of effectiveness):**
-1. Use MJPEG input: `-input_format mjpeg` (reduces bandwidth 5-10x)
-2. Lower resolution: `-s 640x480` instead of 720p
-3. Lower frame rate: `-r 15` instead of 30
-4. Add USB controllers (PCIe expansion cards)
-5. Distribute cameras across different USB controllers
+1. ✓ **Already implemented**: Script uses MJPEG input format by default (reduces bandwidth 5-10x)
+2. Lower frame rate: Change `-r 60` to `-r 30` or `-r 15` in the script
+3. Add USB controllers (PCIe expansion cards)
+4. Distribute cameras across different USB controllers
 
 #### If CPU Limited (encoding can't keep up)
 
-**Symptoms:** High CPU usage, encoding warnings, growing latency
+**Symptoms:** High CPU usage during recording, encoding warnings, growing latency
 
 **Solutions (in order of effectiveness):**
-1. Use hardware encoding: `-c:v h264_nvenc` (NVIDIA) or `-c:v h264_vaapi` (Intel)
-2. Use fastest preset: `-preset ultrafast` (already default)
-3. Use single-channel mode: `-vf extractplanes=y`
-4. Lower resolution (reduces pixels to encode)
+1. ✓ **Already implemented**: Script uses `-c:v copy` mode during recording (minimal CPU)
+2. For post-recording transcoding: Use hardware encoding in transcode scripts
+3. Skip automatic transcoding (Ctrl+C) and transcode later when CPU is available
+4. Reduce transcoding quality: Use lower CRF or faster preset in transcode scripts
 
 #### If Storage Limited (running out of disk space)
 
 **Symptoms:** Disk filling up quickly, need longer recordings
 
 **Solutions (in order of effectiveness):**
-1. Use single-channel mode: `-vf extractplanes=y` (~50% reduction)
-2. Increase CRF: `-crf 28` instead of 23 (~50% reduction)
-3. Use slower preset (if CPU allows): `-preset medium` (~40% reduction)
-4. Lower resolution: `-s 640x480` (~75% reduction from 720p)
-5. Lower frame rate: `-r 15` (~50% reduction)
+1. ✓ **Already implemented**: Automatic transcoding after recording compresses files significantly
+2. ✓ **Already implemented**: Transcoding scales to 960px width (reduces file size)
+3. Adjust transcoding CRF: Modify script to use `-crf 28` instead of 23 (~50% additional reduction)
+4. Lower recording frame rate: Change `-r 60` to `-r 30` or `-r 15` in recording script
+5. Delete original uncompressed files after transcoding completes successfully
 
-#### Quick Reference: Flag Changes by Constraint
+#### Quick Reference: Current Script Settings
 
-| Constraint | Flag to Change | From | To | Effect |
-|------------|---------------|------|-----|--------|
-| USB bandwidth | `-input_format` | (none) | `mjpeg` | -80% bandwidth |
-| USB bandwidth | `-s` | `1280x720` | `640x480` | -60% bandwidth |
-| USB bandwidth | `-r` | `30` | `15` | -50% bandwidth |
-| CPU load | `-c:v` | `libx264` | `h264_nvenc` | -90% CPU |
-| CPU load | `-vf` | (none) | `extractplanes=y` | -30% CPU |
-| File size | `-crf` | `23` | `28` | -50% size |
-| File size | `-vf` | (none) | `extractplanes=y` | -50% size |
-| File size | `-preset` | `ultrafast` | `medium` | -40% size |
+| Feature | Current Setting | Effect | Alternative |
+|---------|----------------|--------|-------------|
+| USB bandwidth | `-input_format mjpeg` | -80% bandwidth | Remove flag for uncompressed |
+| Recording CPU | `-c:v copy` | Minimal CPU during capture | `-c:v libx264` to encode during capture |
+| Recording frame rate | `-r 60` | 60 fps capture | `-r 30` or `-r 15` for lower bandwidth |
+| Transcoding quality | `-crf 23` | Balanced quality/size | `-crf 18` (larger) or `-crf 28` (smaller) |
+| Transcoding resolution | `scale=960:-1` | 960px width | `scale=1280:-1` (larger) or `scale=640:-1` (smaller) |
 
 #### For DeepLabCut/Tracking Applications
-- Single-channel (Y plane) recording reduces file size without losing tracking accuracy
-- Lower resolutions (640x480) may be sufficient and reduce bandwidth
-- Consistent frame rate is more important than high resolution
-- MJPEG input mode is recommended for multi-camera setups
+- ✓ **Already optimized**: Script uses MJPEG input for reduced USB bandwidth
+- ✓ **Already optimized**: Copy mode during recording ensures no dropped frames
+- ✓ **Already optimized**: Automatic transcoding compresses files after recording
+- The 960px width scaling is suitable for most tracking applications
+- Consistent frame rate (60 fps) is maintained throughout recording
+- Consider lowering frame rate to 30 fps if 60 fps is not needed for your application
 
 ## Notes
 
