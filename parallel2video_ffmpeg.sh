@@ -13,34 +13,21 @@ Uses copy mode (-c:v copy) for faster recording without transcoding
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/recording_utils.sh"
 
-# Function to handle Ctrl+C - ensures timestamps are extracted before exit
+# Function to handle Ctrl+C
 cleanup_on_interrupt() {
     echo "" >&2
-    echo "Ctrl+C detected. Stopping recording and extracting timestamps..." >&2
+    echo "Ctrl+C detected. Stopping recording..." >&2
     
     # Stop recording with marker
     if [ -n "$time_file" ]; then
         stop_recording "$time_file"
     fi
     
-    # Extract timestamps from recorded video files
-    echo "Extracting timestamps from video files..."
-    for i in $(seq 0 $((NUM_CAMERAS - 1))); do
-        # We are already in the recording directory
-        video_file="name_cam${i}.mp4"
-        timestamps_file="cam${i}_timestamps.txt"
-        if [ -f $video_file ]; then
-            echo "Extracting timestamps from ${video_file}..." 
-            ffmpeg -i $video_file -f mkvtimestamp_v2 -copyts $timestamps_file 2>/dev/null
-            echo "Timestamps saved to ${timestamps_file}" 
-        fi
-    done
-    
-    echo "Recording and timestamp extraction complete!" >&2
+    echo "Recording complete!" >&2
     exit 0
 }
 
-# Trap SIGINT (Ctrl+C) to ensure timestamps are written
+# Trap SIGINT (Ctrl+C)
 trap cleanup_on_interrupt SIGINT
 
 # Help flag
@@ -78,16 +65,7 @@ start_recording "$time_file"
 # Execute video recording
 eval $exec_string
 
-# Disable trap for normal exit to avoid duplicate cleanup
-trap - SIGINT
-
 # Stop recording with marker
 stop_recording "$time_file"
 
-# Extract timestamps from recorded video files
-# If not interrupted, extract timestamps here
-if [ $? -eq 0 ]; then
-    cleanup_on_interrupt
-fi
-
-echo "Recording and timestamp extraction complete!"
+echo "Recording complete!"
