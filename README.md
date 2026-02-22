@@ -1,6 +1,126 @@
 
 Code to record from 2+ cameras simultaneously and split video into trials
 
+## Quickstart
+
+### Running Your First Recording
+
+1. **Connect your cameras** - Plug in 2 or more USB cameras to your computer
+
+2. **Check camera devices** - Find your camera device paths:
+```bash
+v4l2-ctl --list-devices
+```
+This will show output like:
+```
+USB Camera (usb-0000:00:14.0-1):
+    /dev/video0
+    /dev/video1
+
+USB Camera (usb-0000:00:14.0-2):
+    /dev/video2
+    /dev/video3
+```
+Note the `/dev/videoX` paths for your cameras.
+
+3. **Configure your cameras** - Edit `config.json` to set your camera device paths:
+```json
+{
+  "video_devices": [
+    "/dev/video0",
+    "/dev/video2"
+  ]
+}
+```
+
+4. **Run the recording script**:
+```bash
+./parallel2video_ffmpeg.sh
+```
+
+5. **Provide inputs when prompted**:
+   - **Filename**: Enter a descriptive name for your recording session (e.g., `mouse_trial_01`)
+   - **Duration**: Enter recording time in minutes (e.g., `5` for 5 minutes)
+   - The script will automatically append date and time to your filename
+
+6. **Stop recording**:
+   - Press `Ctrl+C` to stop recording early, or
+   - Wait for the timer to complete
+
+7. **Automatic transcoding**:
+   - After recording stops, the script automatically transcodes videos
+   - This compresses files using H.264 and scales to 960px width
+   - You can press `Ctrl+C` during transcoding to skip it
+
+### What You'll Get
+
+After recording completes, you'll have these files in your output directory:
+
+**Original recordings** (in main directory):
+- `mouse_trial_01_2026-02-21_14-30-00_cam1.mp4` - Raw video from camera 1
+- `mouse_trial_01_2026-02-21_14-30-00_cam2.mp4` - Raw video from camera 2
+- `mouse_trial_01_2026-02-21_14-30-00_markers.txt` - Timestamp markers for start/stop times
+
+**Transcoded videos** (in `coded/` subdirectory):
+- `coded/mouse_trial_01_2026-02-21_14-30-00_cam1_coded.mp4` - Compressed video from camera 1
+- `coded/mouse_trial_01_2026-02-21_14-30-00_cam2_coded.mp4` - Compressed video from camera 2
+
+**File sizes** (approximate for 5 minutes at 720p60):
+- Original files: ~2-3 GB each (MJPEG format)
+- Transcoded files: ~200-400 MB each (H.264 compressed, 960px width)
+
+### Example Session
+
+```bash
+$ ./parallel2video_ffmpeg.sh
+
+Enter filename for recording: mouse_behavior_test
+Enter recording duration in minutes: 3
+
+Checking disk space...
+✓ Sufficient disk space available (50.2 GB free)
+
+Recording will be saved to: output/mouse_behavior_test_2026-02-21_14-30-00/
+
+Recording with copy mode (-c:v copy) - no transcoding, faster capture...
+Recording started at: 2026-02-21 14:30:00
+
+[Press Ctrl+C to stop recording early]
+
+Recording stopped at: 2026-02-21 14:33:00
+Recording complete!
+
+Starting transcoding of recorded videos...
+This will compress the videos using H.264 with CRF 23 and scale to 960px width.
+
+Found 2 video file(s) to transcode
+Transcoding: mouse_behavior_test_2026-02-21_14-30-00_cam1.mp4
+  Original size: 2.8 GB
+  Transcoded size: 320 MB (88.6% reduction)
+Transcoding: mouse_behavior_test_2026-02-21_14-30-00_cam2.mp4
+  Original size: 2.9 GB
+  Transcoded size: 335 MB (88.4% reduction)
+
+All done!
+```
+
+### Troubleshooting
+
+**"Insufficient disk space" error:**
+- Free up disk space or adjust `min_free_space_gb` in `config.json`
+
+**"Device or resource busy" error:**
+- Another program is using the camera
+- Close other applications (Zoom, Skype, Cheese, etc.)
+
+**Dropped frames or "select timeout" errors:**
+- USB bandwidth issue - try lowering frame rate in the script (change `-r 60` to `-r 30`)
+- Or distribute cameras across different USB controllers
+
+**Camera not found:**
+- Run `v4l2-ctl --list-devices` to verify device paths
+- Update `config.json` with correct paths
+
 ## Dependencies
 
 ### System Dependencies
