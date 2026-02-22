@@ -128,17 +128,16 @@ setup_output_directory() {
 }
 
 # Generate recording name with timestamp
-# Sets: fin_name
+# Sets: fin_name, base_name
 generate_recording_name() {
-    local name_template="name_video_time"
-    
     echo -n "Enter name: "
-    read name
+    read base_name
     local time=$(date +%g%m%d-%H%M%S)
     
-    fin_name=${name_template/name/$name}
-    fin_name=${fin_name/time/$time}
-    echo "File name : $fin_name"
+    # Directory name includes timestamp for organization
+    fin_name="${base_name}_video_${time}"
+    echo "Directory name: $fin_name"
+    echo "Video files will be named: ${base_name}_cam<N>.mp4"
 }
 
 # Build device list string for parallel execution

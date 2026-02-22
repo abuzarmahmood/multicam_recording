@@ -99,7 +99,7 @@ build_device_list
 # Uses -use_wallclock_as_timestamps 1 to save wall-clock timestamps in video files
 # Uses copy mode (-c:v copy) for faster recording without transcoding
 echo "Recording with copy mode (-c:v copy) - no transcoding, faster capture..."
-exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -input_format mjpeg -i {2} -r 60 -c:v copy name_cam{1}.mp4"
+exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -input_format mjpeg -i {2} -r 60 -c:v copy ${base_name}_cam{1}.mp4"
 
 time_file="${fin_name}_markers.txt"
 
