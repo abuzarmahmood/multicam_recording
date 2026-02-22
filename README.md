@@ -167,7 +167,7 @@ This project requires the following system packages to be installed:
 #### Ubuntu/Debian:
 ```bash
 sudo apt-get update
-sudo apt-get install ffmpeg streamer parallel zenity figlet
+sudo apt-get install ffmpeg parallel zenity figlet
 ```
 
 ### 🐍 Python Dependencies
@@ -215,7 +215,6 @@ pip install opencv-python numpy matplotlib tqdm moviepy
 #### 4️⃣ Make the shell scripts executable
 ```bash
 chmod +x parallel2video_ffmpeg.sh
-chmod +x parallel2video_streamer.sh
 chmod +x convert_files_gui.sh
 chmod +x postprocessing/transcode_copy_videos.sh
 chmod +x postprocessing/transcode_copy_videos_gui.sh
@@ -229,19 +228,19 @@ chmod +x postprocessing/combine_utils/combine_videos_gui.sh
 
 ```
 ┌─────────────────────────────────────┐
-│  1️⃣ parallel2video_ffmpeg.sh       │
-│     (or parallel2video_streamer.sh) │
+│  1️⃣ parallel2video_ffmpeg.sh         │
+│                                     │
 └──────────────┬──────────────────────┘
                │
                ▼
 ┌─────────────────────────────────────┐
-│  2️⃣ convert_files_gui.sh           │
+│  2️⃣ convert_files_gui.sh             │
 │     (or transcode_copy_videos.sh)   │
 └──────────────┬──────────────────────┘
                │
                ▼
 ┌─────────────────────────────────────┐
-│  3️⃣ split_script.py                │
+│  3️⃣ split_script.py                  │
 └─────────────────────────────────────┘
 ```
 
@@ -262,12 +261,6 @@ chmod +x postprocessing/combine_utils/combine_videos_gui.sh
 - Outputs MP4 files with MJPEG input format for reduced USB bandwidth
 - Uses ffmpeg for modern video processing
 
-### Alternative: parallel2video_streamer.sh (Legacy)
-- Automatically checks disk space before starting recording
-- Uses the older streamer utility for backward compatibility
-- Outputs AVI files that may require conversion (handled in Step 2)
-- Use this if ffmpeg is not available or if you need to maintain compatibility with existing workflows
-
 > ⚠️ **Note:** Input device numbers are hardcoded and may not be correct, use `v4l2-ctl --list-devices` to adjust
 
 ---
@@ -275,7 +268,6 @@ chmod +x postprocessing/combine_utils/combine_videos_gui.sh
 ### 🔄 Step 2: Convert/Transcode Videos (Optional)
 
 **Using `convert_files_gui.sh`**
-- When using parallel2video_streamer.sh: This step uses ffmpeg to get rid of a bug which prevents counting the total number of frames in the original AVI files
 - When using parallel2video_ffmpeg.sh: This step is now **optional** as automatic transcoding happens after recording
 - The automatic transcoding after recording compresses files using H.264 CRF 23 and scales to 960px width
 - If you skipped automatic transcoding (Ctrl+C during transcoding), you can use this GUI tool or the transcode scripts below
@@ -644,28 +636,6 @@ The script builds ffmpeg commands dynamically. Key flags used:
 
 ---
 
-### 🕰️ Legacy Streamer Script
-
-**`parallel2video_streamer.sh`**
-
-```bash
-streamer -q -c /dev/video0 -s 1280x720 -f jpeg -t 324000 -r 30 -j 75 -w 0 -o output.avi
-```
-
-| Flag | Value | Description |
-|------|-------|-------------|
-| `-q` | - | Quiet mode |
-| `-c` | /dev/videoX | Capture device |
-| `-s` | 1280x720 | Resolution |
-| `-f` | jpeg | Output format (MJPEG) |
-| `-t` | 324000 | Total frames (30fps × 60s × 180min) |
-| `-r` | 30 | Frame rate |
-| `-j` | 75 | JPEG quality (0-100) |
-| `-w` | 0 | Wait time between frames |
-| `-o` | output.avi | Output file |
-
----
-
 ## 🎯 Choosing the Right Settings
 
 > **Decision guide based on your primary constraint**
@@ -737,7 +707,6 @@ streamer -q -c /dev/video0 -s 1280x720 -f jpeg -t 324000 -r 30 -j 75 -w 0 -o out
 
 - The scripts are designed for Linux systems
 - parallel2video_ffmpeg.sh uses ffmpeg for modern video processing (recommended)
-- parallel2video_streamer.sh uses the legacy streamer utility for backward compatibility
 - zenity provides the GUI for file selection in the conversion step
 - ffmpeg is used extensively for video processing and conversion
 
@@ -756,4 +725,3 @@ streamer -q -c /dev/video0 -s 1280x720 -f jpeg -t 324000 -r 30 -j 75 -w 0 -o out
 ### 🌐 General Resources
 
 - https://tldp.org/HOWTO/Webcam-HOWTO/framegrabbers.html
-- https://linux.die.net/man/1/streamer
