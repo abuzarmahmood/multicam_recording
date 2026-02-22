@@ -69,3 +69,52 @@ eval $exec_string
 stop_recording "$time_file"
 
 echo "Recording complete!"
+echo ""
+echo "Starting transcoding of recorded videos..."
+echo "This will compress the videos using H.264 with CRF 23 and scale to 960px width."
+echo "Press Ctrl+C to skip transcoding if you want to do it later."
+echo ""
+
+# Allow a brief moment for user to read the message
+sleep 2
+
+# Transcode all recorded videos in the current recording directory
+# Find all .mp4 files that don't have "coded" in their filename
+video_files=()
+while IFS= read -r -d '' file; do
+    basename_file=$(basename "$file")
+    if [[ "$basename_file" != *"coded"* ]]; then
+        video_files+=("$file")
+    fi
+done < <(find . -maxdepth 1 -name "*.mp4" -type f -print0)
+
+if [[ ${#video_files[@]} -gt 0 ]]; then
+    echo "Found ${#video_files[@]} video file(s) to transcode"
+    
+    # Create coded subdirectory
+    mkdir -p coded
+    
+    # Process each video file
+    success_count=0
+    for file in "${video_files[@]}"; do
+        basename_file=$(basename "$file" .mp4)
+        output_file="coded/${basename_file}_coded.mp4"
+        
+        echo "Transcoding: $file -> $output_file"
+        
+        if ffmpeg -i "$file" -c:v libx264 -crf 23 -vf scale=960:-1 "$output_file" 2>&1 | grep -E "time=|error"; then
+            echo "✓ Successfully transcoded: $basename_file"
+            ((success_count++))
+        else
+            echo "✗ Failed to transcode: $file"
+        fi
+        echo ""
+    done
+    
+    echo "Transcoding completed: $success_count/${#video_files[@]} files processed successfully"
+else
+    echo "No video files found to transcode"
+fi
+
+echo ""
+echo "All done!"
