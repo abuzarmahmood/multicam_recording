@@ -1,6 +1,6 @@
 {
   "disk_space": {
-    "min_free_space_gb": 20,
+    "min_free_space_gb": 20
   },
   "recording": {
     "num_cameras": 2
