@@ -18,7 +18,6 @@ transcode_videos() {
     echo ""
     echo "Starting transcoding of recorded videos..."
     echo "This will compress the videos using H.264 with CRF 23 and scale to 960px width."
-    echo "Press Ctrl+C to skip transcoding if you want to do it later."
     echo ""
     
     # Allow a brief moment for user to read the message
@@ -32,8 +31,24 @@ transcode_videos() {
         return 0
     fi
     
-    # Call the transcode script for the current directory
-    "$transcode_script" .
+    # Find all .mp4 files that were just recorded (don't have "coded" in filename)
+    local video_files=()
+    while IFS= read -r -d '' file; do
+        local basename_file=$(basename "$file")
+        if [[ "$basename_file" != *"coded"* ]]; then
+            video_files+=("$file")
+        fi
+    done < <(find . -maxdepth 1 -name "*.mp4" -type f -print0)
+    
+    if [[ ${#video_files[@]} -eq 0 ]]; then
+        echo "No video files found to transcode"
+        return 0
+    fi
+    
+    echo "Found ${#video_files[@]} video file(s) to transcode"
+    
+    # Call the transcode script with the specific video files
+    "$transcode_script" "${video_files[@]}"
     
     echo ""
     echo "All done!"
