@@ -58,9 +58,6 @@ setup_output_directory "$SCRIPT_DIR" || exit 1
 # Generate recording name
 generate_recording_name
 
-# Duration set to very large number, script is killed to stop recording
-duration=180
-
 # Setup recording directory
 setup_recording_directory "$output_dir" "$fin_name"
 
