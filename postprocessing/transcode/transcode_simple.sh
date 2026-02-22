@@ -47,7 +47,7 @@ transcode_video() {
     echo "Processing: $input_file -> $output_file"
     
     # Execute FFmpeg command with suppressed output
-    if ffmpeg -loglevel error -i "$input_file" -c:v libx264 -crf 23 -vf scale=960:-1 "$output_file"; then
+    if ffmpeg -loglevel error -i "$input_file" -c:v libx264 -crf 23 "$output_file"; then
         echo "✓ Successfully transcoded: $basename"
         
         # Show file size comparison
