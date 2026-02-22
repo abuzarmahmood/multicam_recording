@@ -47,8 +47,8 @@ transcode_videos() {
     
     echo "Found ${#video_files[@]} video file(s) to transcode"
     
-    # Call the transcode script with the specific video files
-    "$transcode_script" "${video_files[@]}"
+    # Call the transcode script with current directory
+    "$transcode_script" .
     
     echo ""
     echo "All done!"
