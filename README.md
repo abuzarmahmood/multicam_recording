@@ -1,13 +1,34 @@
+# 🎥 Multi-Camera Recording Suite
 
-Code to record from 2+ cameras simultaneously and split video into trials
+> **Professional multi-camera recording and processing toolkit for behavioral research, DeepLabCut, and video analysis**
 
-## Quickstart
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![FFmpeg](https://img.shields.io/badge/FFmpeg-required-green.svg)](https://ffmpeg.org/)
 
-### Running Your First Recording
+---
 
-1. **Connect your cameras** - Plug in 2 or more USB cameras to your computer
+## ✨ Features
 
-2. **Check camera devices** - Find your camera device paths:
+- 🎬 **Simultaneous multi-camera recording** with automatic synchronization
+- 💾 **Smart disk space management** with pre-recording checks
+- ⚡ **Optimized USB bandwidth** using MJPEG compression
+- 🔄 **Automatic post-recording transcoding** for efficient storage
+- 📊 **Video combining utilities** for side-by-side analysis
+- 🎯 **DeepLabCut-ready** output with consistent frame rates
+- 🖥️ **GUI and CLI interfaces** for all major operations
+
+---
+
+## 🚀 Quickstart
+
+### 📹 Running Your First Recording
+
+#### 1️⃣ Connect Your Cameras
+Plug in 2 or more USB cameras to your computer
+
+#### 2️⃣ Check Camera Devices
+Find your camera device paths:
 ```bash
 v4l2-ctl --list-devices
 ```
@@ -21,9 +42,10 @@ USB Camera (usb-0000:00:14.0-2):
     /dev/video2
     /dev/video3
 ```
-Note the `/dev/videoX` paths for your cameras.
+> 💡 **Tip:** Note the `/dev/videoX` paths for your cameras.
 
-3. **Configure your cameras** - Edit `config.json` to set your camera device paths:
+#### 3️⃣ Configure Your Cameras
+Edit `config.json` to set your camera device paths:
 ```json
 {
   "video_devices": [
@@ -33,43 +55,52 @@ Note the `/dev/videoX` paths for your cameras.
 }
 ```
 
-4. **Run the recording script**:
+#### 4️⃣ Run the Recording Script
 ```bash
 ./parallel2video_ffmpeg.sh
 ```
 
-5. **Provide inputs when prompted**:
+#### 5️⃣ Provide Inputs When Prompted
    - **Filename**: Enter a descriptive name for your recording session (e.g., `mouse_trial_01`)
    - **Duration**: Enter recording time in minutes (e.g., `5` for 5 minutes)
    - The script will automatically append date and time to your filename
 
-6. **Stop recording**:
+#### 6️⃣ Stop Recording
    - Press `Ctrl+C` to stop recording early, or
    - Wait for the timer to complete
 
-7. **Automatic transcoding**:
+#### 7️⃣ Automatic Transcoding
    - After recording stops, the script automatically transcodes videos
    - This compresses files using H.264 and scales to 960px width
    - You can press `Ctrl+C` during transcoding to skip it
 
-### What You'll Get
+---
+
+## 📦 What You'll Get
 
 After recording completes, you'll have these files in your output directory:
 
-**Original recordings** (in main directory):
+### 📁 File Structure
+
+#### 🎬 Original Recordings
+*Located in main directory:*
 - `mouse_trial_01_2026-02-21_14-30-00_cam1.mp4` - Raw video from camera 1
 - `mouse_trial_01_2026-02-21_14-30-00_cam2.mp4` - Raw video from camera 2
 - `mouse_trial_01_2026-02-21_14-30-00_markers.txt` - Timestamp markers for start/stop times
 
-**Transcoded videos** (in `coded/` subdirectory):
+#### 🗜️ Transcoded Videos
+*Located in `coded/` subdirectory:*
 - `coded/mouse_trial_01_2026-02-21_14-30-00_cam1_coded.mp4` - Compressed video from camera 1
 - `coded/mouse_trial_01_2026-02-21_14-30-00_cam2_coded.mp4` - Compressed video from camera 2
 
-**File sizes** (approximate for 5 minutes at 720p60):
+#### 💾 File Sizes
+*Approximate for 5 minutes at 720p60:*
 - Original files: ~2-3 GB each (MJPEG format)
 - Transcoded files: ~200-400 MB each (H.264 compressed, 960px width)
 
-### Example Session
+---
+
+## 🎬 Example Session
 
 ```bash
 $ ./parallel2video_ffmpeg.sh
@@ -104,26 +135,32 @@ Transcoding: mouse_behavior_test_2026-02-21_14-30-00_cam2.mp4
 All done!
 ```
 
-### Troubleshooting
+---
 
-**"Insufficient disk space" error:**
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### ⚠️ "Insufficient disk space" error
 - Free up disk space or adjust `min_free_space_gb` in `config.json`
 
-**"Device or resource busy" error:**
+#### ⚠️ "Device or resource busy" error
 - Another program is using the camera
 - Close other applications (Zoom, Skype, Cheese, etc.)
 
-**Dropped frames or "select timeout" errors:**
+#### ⚠️ Dropped frames or "select timeout" errors
 - USB bandwidth issue - try lowering frame rate in the script (change `-r 60` to `-r 30`)
 - Or distribute cameras across different USB controllers
 
-**Camera not found:**
+#### ⚠️ Camera not found
 - Run `v4l2-ctl --list-devices` to verify device paths
 - Update `config.json` with correct paths
 
-## Dependencies
+---
 
-### System Dependencies
+## 📋 Dependencies
+
+### 🖥️ System Dependencies
 
 This project requires the following system packages to be installed:
 
@@ -133,7 +170,7 @@ sudo apt-get update
 sudo apt-get install ffmpeg streamer parallel zenity figlet
 ```
 
-### Python Dependencies
+### 🐍 Python Dependencies
 
 Install the required Python packages using pip:
 
@@ -155,22 +192,27 @@ Then install with:
 pip install -r requirements.txt
 ```
 
-## Installation
+---
 
-1. Clone this repository:
+## 📥 Installation
+
+### Step-by-Step Setup
+
+#### 1️⃣ Clone this repository
 ```bash
 git clone <repository-url>
 cd multicam_recording
 ```
 
-2. Install system dependencies (see above)
+#### 2️⃣ Install system dependencies
+See the [System Dependencies](#️-system-dependencies) section above
 
-3. Install Python dependencies:
+#### 3️⃣ Install Python dependencies
 ```bash
 pip install opencv-python numpy matplotlib tqdm moviepy
 ```
 
-4. Make the shell scripts executable:
+#### 4️⃣ Make the shell scripts executable
 ```bash
 chmod +x parallel2video_ffmpeg.sh
 chmod +x parallel2video_streamer.sh
@@ -181,17 +223,35 @@ chmod +x postprocessing/transcode_simple.sh
 chmod +x postprocessing/combine_utils/combine_videos_gui.sh
 ```
 
-## Usage Pipeline
+---
 
-1) parallel2video_ffmpeg.sh (or parallel2video_streamer.sh for legacy systems)
-|
-V
-2) convert_files_gui.sh (or postprocessing/transcode_copy_videos_gui.sh for -c:v copy videos)
-|
-V
-3) split_script.py
+## 🔄 Usage Pipeline
 
-### Step 1: Record video using parallel2video_ffmpeg.sh (Recommended)
+```
+┌─────────────────────────────────────┐
+│  1️⃣ parallel2video_ffmpeg.sh       │
+│     (or parallel2video_streamer.sh) │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│  2️⃣ convert_files_gui.sh           │
+│     (or transcode_copy_videos.sh)   │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│  3️⃣ split_script.py                │
+└─────────────────────────────────────┘
+```
+
+---
+
+## 🎯 Step-by-Step Guide
+
+### 🎬 Step 1: Record Video (Recommended Method)
+
+**Using `parallel2video_ffmpeg.sh`**
 - Automatically checks disk space before starting recording
 - Supply filename for session, time and date automatically appended to name
 - Requires 2+ cameras connected to /dev/video<123>
@@ -208,16 +268,20 @@ V
 - Outputs AVI files that may require conversion (handled in Step 2)
 - Use this if ffmpeg is not available or if you need to maintain compatibility with existing workflows
 
-**Note:** Input device numbers are hardcoded and may not be correct, use `v4l2-ctl --list-devices` to adjust
+> ⚠️ **Note:** Input device numbers are hardcoded and may not be correct, use `v4l2-ctl --list-devices` to adjust
 
-### Step 2: Convert output video files using convert_files_gui.sh (Optional)
+---
+
+### 🔄 Step 2: Convert/Transcode Videos (Optional)
+
+**Using `convert_files_gui.sh`**
 - When using parallel2video_streamer.sh: This step uses ffmpeg to get rid of a bug which prevents counting the total number of frames in the original AVI files
 - When using parallel2video_ffmpeg.sh: This step is now **optional** as automatic transcoding happens after recording
 - The automatic transcoding after recording compresses files using H.264 CRF 23 and scales to 960px width
 - If you skipped automatic transcoding (Ctrl+C during transcoding), you can use this GUI tool or the transcode scripts below
 - Provides a GUI interface to select files for conversion (requires zenity)
 
-### Alternative Step 2: Transcode videos using postprocessing/transcode_copy_videos_gui.sh
+**Alternative: Using `postprocessing/transcode_copy_videos_gui.sh`**
 - Specifically designed to handle videos recorded with `-c:v copy` flag
 - **Note**: parallel2video_ffmpeg.sh now automatically transcodes after recording, so this is only needed if you skipped that step
 - Automatically detects videos that were recorded without compression
@@ -228,7 +292,7 @@ V
 - Provides both GUI and command-line interfaces
 - Uses efficient H.264 encoding to significantly reduce file size while maintaining quality
 
-**Command Line Usage:**
+#### 💻 Command Line Usage
 ```bash
 # Basic usage
 ./postprocessing/transcode_copy_videos.sh video1.mp4 video2.mp4
@@ -243,13 +307,17 @@ V
 ./postprocessing/transcode_copy_videos_gui.sh
 ```
 
-**Quality Presets:**
+#### ⚙️ Quality Presets
 - `low` - CRF 28, fast preset (smaller files, faster processing)
 - `medium` - CRF 23, medium preset (balanced quality/size)
 - `high` - CRF 18, slow preset (better quality, smaller files)
 - `ultra` - CRF 15, veryslow preset (best quality, smallest files)
 
-### Simple Transcoding: postprocessing/transcode_simple.sh
+---
+
+### ⚡ Simple Transcoding
+
+**Using `postprocessing/transcode_simple.sh`**
 - Simple script for basic video compression and scaling
 - **Note**: parallel2video_ffmpeg.sh now uses similar automatic transcoding after recording
 - Finds all MP4 files in a directory (excluding files already containing "coded" in filename)
@@ -258,7 +326,7 @@ V
 - Shows file size comparison before and after compression
 - Ideal for quick batch processing of recorded videos or re-transcoding with different settings
 
-**Usage:**
+#### 💻 Usage
 ```bash
 # Process current directory
 ./postprocessing/transcode_simple.sh
@@ -270,39 +338,51 @@ V
 ./postprocessing/transcode_simple.sh --help
 ```
 
-### Step 3: Split video using split_script.py
+---
+
+### ✂️ Step 3: Split Videos
+
+**Using `split_script.py`**
 - Split video according to a file marking the start and end of the videos
 - Another file marks the starting point of every trial
 - Run with: `python split_script.py -h` for usage instructions
 
-### Step 4: Combine videos using postprocessing/combine_utils/ (NEW)
+---
+
+### 🎞️ Step 4: Combine Videos
+
+**Using `postprocessing/combine_utils/`** ✨ NEW
 - Combine multiple videos into a single frame showing all videos simultaneously
 - Use `postprocessing/combine_utils/combine_videos_gui.sh` for GUI interface or `postprocessing/combine_utils/combine_videos.py` for command line
 - Supports various grid layouts (auto, 2x1, 1x2, 2x2, 3x1, 1x3)
 - Adjustable quality settings and video scaling
 - Uses ffmpeg for efficient video processing
 
-**Command Line Usage:**
+#### 💻 Command Line Usage
 ```bash
 python3 postprocessing/combine_utils/combine_videos.py video1.avi video2.avi -o combined.mp4 --grid 2x1 --quality high
 ```
 
-**GUI Usage:**
+#### 🖱️ GUI Usage
 ```bash
 ./postprocessing/combine_utils/combine_videos_gui.sh
 ```
 
-## Hardware Requirements
+---
+
+## 💻 Hardware Requirements
 
 - 2 USB cameras (or other video devices)
 - Sufficient disk space for video recordings
 - Linux system recommended (some dependencies may not work on other OS)
 
-## Configuration
+---
+
+## ⚙️ Configuration
 
 The project uses a `config.json` file to configure various settings, including disk space requirements:
 
-### Disk Space Configuration
+### 💾 Disk Space Configuration
 
 The recording scripts automatically check for sufficient disk space before starting. The configuration includes:
 
@@ -322,7 +402,7 @@ The recording scripts automatically check for sufficient disk space before start
 - `estimated_space_per_minute_gb`: Estimated disk space needed per minute of recording (default: 0.5 GB)
 - `max_recording_minutes`: Maximum allowed recording duration in minutes (default: 180)
 
-### Recording Configuration
+### 🎬 Recording Configuration
 
 ```json
 {
@@ -335,7 +415,7 @@ The recording scripts automatically check for sufficient disk space before start
 }
 ```
 
-### Manual Disk Space Check
+### 🔍 Manual Disk Space Check
 
 You can manually check disk space using the provided utility:
 
@@ -347,11 +427,15 @@ python3 disk_space_check.py [--config config.json] [--path .] [--duration 60]
 - `--path`: Directory to check for disk space (default: current directory)
 - `--duration`: Expected recording duration in minutes (optional)
 
-## FFmpeg Flags Reference
+---
+
+## 🎛️ FFmpeg Flags Reference
+
+> **Comprehensive guide to all FFmpeg flags used in this project**
 
 This section documents all ffmpeg flags used in the project, explains why current settings were selected, and describes alternative options.
 
-### Understanding Flag Categories
+### 📊 Understanding Flag Categories
 
 FFmpeg flags fall into three categories based on where they have their primary effect:
 
@@ -363,7 +447,7 @@ FFmpeg flags fall into three categories based on where they have their primary e
 
 Understanding these categories helps you optimize for your specific constraints (USB bandwidth limited? CPU limited? Storage limited?).
 
-### Flag Impact Summary
+### 📈 Flag Impact Summary
 
 The following table shows all flags used in the recording script and their primary impact:
 
@@ -381,7 +465,11 @@ The following table shows all flags used in the recording script and their prima
 
 **Legend:** ⬆️ = increases, ⬇️ = decreases, - = no significant effect
 
-### Recording Script (parallel2video_ffmpeg.sh)
+---
+
+## 🎬 Recording Script Details
+
+### `parallel2video_ffmpeg.sh`
 
 The main recording command uses copy mode for fast capture, then transcodes after recording:
 
@@ -390,12 +478,12 @@ The main recording command uses copy mode for fast capture, then transcodes afte
 ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -input_format mjpeg -i /dev/video0 -r 60 -c:v copy output.mp4
 ```
 
-**After Recording (automatic transcoding):**
+##### 🔄 After Recording (automatic transcoding)
 ```bash
 ffmpeg -i output.mp4 -c:v libx264 -crf 23 -vf scale=960:-1 output_coded.mp4
 ```
 
-#### Camera/Hardware Flags (Affect USB Bandwidth)
+#### 📹 Camera/Hardware Flags (Affect USB Bandwidth)
 
 These flags configure what the camera captures and sends over USB. They directly affect USB bandwidth consumption.
 
@@ -406,7 +494,7 @@ These flags configure what the camera captures and sends over USB. They directly
 | `-i` | /dev/videoX | Input device path | None | Use `v4l2-ctl --list-devices` to find devices |
 | `-r` | 60 | **Frame rate requested from camera** | **MEDIUM** - With MJPEG compression | `30` (halves bandwidth), `15` (quarters bandwidth) |
 
-**USB Bandwidth Calculation:**
+##### 📊 USB Bandwidth Calculation
 ```
 Bandwidth = Width × Height × Bytes_per_pixel × FPS
 Example: 1280 × 720 × 2 (YUYV) × 30 = 55.3 MB/s per camera
@@ -414,25 +502,25 @@ Example: 1280 × 720 × 2 (YUYV) × 30 = 55.3 MB/s per camera
 
 USB 2.0 practical limit is ~53 MB/s total, so 720p30 in raw format can only support 1 camera per USB controller. Use MJPEG input mode (`-input_format mjpeg`) to reduce this significantly.
 
-#### Software/CPU Flags (Affect CPU Load)
+#### 🖥️ Software/CPU Flags (Affect CPU Load)
 
 These flags control how ffmpeg processes and encodes the video on your CPU. They don't affect what the camera sends.
 
-**During Recording (copy mode):**
+##### ⏺️ During Recording (copy mode)
 | Flag | Value | Description | CPU Impact | Alternatives |
 |------|-------|-------------|------------|--------------|
 | `-c:v copy` | copy | **Copy video stream without re-encoding** | **MINIMAL** - No encoding during capture | `libx264` (encode during capture, higher CPU) |
 | `-use_wallclock_as_timestamps 1` | 1 | Use system clock for timestamps | Minimal | Default timestamps |
 | `-copyts` | - | Preserve timestamps | Minimal | - |
 
-**After Recording (automatic transcoding):**
+##### 🔄 After Recording (automatic transcoding)
 | Flag | Value | Description | CPU Impact | Alternatives |
 |------|-------|-------------|------------|--------------|
 | `-c:v libx264` | libx264 | **Software H.264 encoder** | **MEDIUM** - Encoding after recording | `h264_nvenc` (NVIDIA GPU, very low CPU), `h264_vaapi` (Intel GPU) |
 | `-crf 23` | 23 | Constant Rate Factor (quality) | Standard | `18` (higher quality, more CPU), `28` (lower quality, less CPU) |
 | `-vf scale=960:-1` | 960:-1 | Scale to 960px width, maintain aspect ratio | Low | `scale=1280:-1` (larger), `scale=640:-1` (smaller) |
 
-**CPU Load by Preset (approximate for 720p30):**
+##### 📊 CPU Load by Preset (approximate for 720p30)
 | Preset | CPU Usage | File Size |
 |--------|-----------|-----------|
 | ultrafast | ~15% | 1.0x (baseline) |
@@ -443,9 +531,9 @@ These flags control how ffmpeg processes and encodes the video on your CPU. They
 | slow | ~80% | 0.55x |
 | veryslow | ~100% | 0.5x |
 
-#### Output/File Flags (Affect File Size and Compatibility)
+#### 💾 Output/File Flags (Affect File Size and Compatibility)
 
-**During Recording (copy mode):**
+##### ⏺️ During Recording (copy mode)
 - Output format is determined by camera's MJPEG stream
 - File size is larger (uncompressed or lightly compressed)
 - No quality loss during capture
@@ -456,7 +544,7 @@ These flags control how ffmpeg processes and encodes the video on your CPU. They
 | `-crf` | 23 | **Constant Rate Factor (quality)** | **DIRECT** - Lower = larger, higher quality | `18` (visually lossless, ~2x size), `28` (smaller, lower quality) |
 | `-vf scale=960:-1` | 960:-1 | Scale to 960px width | **SIGNIFICANT** - Reduces resolution and file size | `scale=1280:-1` (larger), `scale=640:-1` (smaller) |
 
-**CRF Guidelines:**
+##### 📊 CRF Guidelines
 | CRF | Quality | Typical Use Case | Relative Size |
 |-----|---------|------------------|---------------|
 | 0 | Lossless | Archival master | 10-50x |
@@ -465,7 +553,7 @@ These flags control how ffmpeg processes and encodes the video on your CPU. They
 | 28 | Acceptable | Storage-constrained | 0.5x |
 | 35+ | Low | Previews only | 0.25x |
 
-#### Two-Stage Recording Process
+#### 🔄 Two-Stage Recording Process
 
 The current script uses a two-stage approach:
 
@@ -482,13 +570,13 @@ The current script uses a two-stage approach:
    - Saves transcoded files to `coded/` subdirectory with `_coded` suffix
    - Can be skipped with Ctrl+C if you want to transcode later with different settings
 
-**Benefits of this approach:**
+##### ✅ Benefits of this approach
 - Minimizes risk of dropped frames during recording (copy mode is very fast)
 - Reduces USB bandwidth with MJPEG input format
 - Still achieves good compression through post-recording transcoding
 - Allows flexibility to skip or customize transcoding later
 
-#### USB Bandwidth Management (MJPEG Input Mode)
+#### 🚀 USB Bandwidth Management (MJPEG Input Mode)
 
 The recording script now uses MJPEG input format by default:
 
@@ -501,13 +589,17 @@ ffmpeg -f v4l2 -input_format mjpeg -i /dev/video0 -r 60 -c:v copy ...
 | `-input_format mjpeg` | mjpeg | **Reduces by 5-10x** - Camera compresses before sending (now default) |
 | (alternative) | yuyv422 | Full uncompressed - highest bandwidth |
 
-**Benefits:**
+##### ✅ Benefits
 - Dramatically reduces USB bandwidth, allowing more cameras per USB controller
 - Combined with `-c:v copy`, there's minimal CPU overhead during recording
 - The MJPEG stream is copied directly to file without re-encoding
 - Post-recording transcoding handles compression and scaling
 
-### Conversion Script (convert_files_gui.sh)
+---
+
+### 🔄 Conversion Script
+
+**`convert_files_gui.sh`**
 
 ```bash
 ffmpeg -i input.avi -b:v 2500k output_converted.avi
@@ -518,11 +610,15 @@ ffmpeg -i input.avi -b:v 2500k output_converted.avi
 | `-i` | input.avi | Input file | - | - |
 | `-b:v` | 2500k | Video bitrate (2.5 Mbps) | Reasonable compression for archival | `1000k` (smaller), `5000k` (higher quality), use `-crf` instead for quality-based encoding |
 
-### Video Combining Script (combine_videos.py)
+---
+
+### 🎞️ Video Combining Script
+
+**`combine_videos.py`**
 
 The script builds ffmpeg commands dynamically. Key flags used:
 
-#### Scaling Filter
+#### 📐 Scaling Filter
 ```bash
 -filter_complex "[0:v]scale=640:-1:flags=lanczos[v0]"
 ```
@@ -532,21 +628,25 @@ The script builds ffmpeg commands dynamically. Key flags used:
 | `scale=640:-1` | 640:-1 | Scale width to 640, auto-calculate height | Maintains aspect ratio | `scale=1280:-1` (larger), `scale=-1:480` (height-based) |
 | `flags=lanczos` | lanczos | High-quality scaling algorithm | Best quality for downscaling | `bilinear` (faster), `bicubic` (balanced), `neighbor` (fastest, pixelated) |
 
-#### Layout Filters
+#### 🎨 Layout Filters
 | Filter | Description | Use Case |
 |--------|-------------|----------|
 | `hstack` | Horizontal stack | Side-by-side videos |
 | `vstack` | Vertical stack | Top-bottom videos |
 | `xstack` | Grid layout | 2x2 or larger grids |
 
-#### Quality Settings
+#### ⚙️ Quality Settings
 | Quality Level | CRF | Preset | Use Case |
 |---------------|-----|--------|----------|
 | low | 28 | fast | Quick previews, small files |
 | medium | 23 | medium | General use |
 | high | 18 | slow | Archival, best quality |
 
-### Legacy Streamer Script (parallel2video_streamer.sh)
+---
+
+### 🕰️ Legacy Streamer Script
+
+**`parallel2video_streamer.sh`**
 
 ```bash
 streamer -q -c /dev/video0 -s 1280x720 -f jpeg -t 324000 -r 30 -j 75 -w 0 -o output.avi
@@ -564,13 +664,18 @@ streamer -q -c /dev/video0 -s 1280x720 -f jpeg -t 324000 -r 30 -j 75 -w 0 -o out
 | `-w` | 0 | Wait time between frames |
 | `-o` | output.avi | Output file |
 
-### Choosing the Right Settings
+---
 
-Use this decision guide based on your primary constraint:
+## 🎯 Choosing the Right Settings
 
-#### If USB Bandwidth Limited (multiple cameras, dropped frames)
+> **Decision guide based on your primary constraint**
 
-**Symptoms:** Frames dropping, "select timeout" errors, cameras disconnecting
+### 🔌 If USB Bandwidth Limited
+
+**Symptoms:**
+- 🔴 Frames dropping
+- 🔴 "select timeout" errors
+- 🔴 Cameras disconnecting
 
 **Solutions (in order of effectiveness):**
 1. ✓ **Already implemented**: Script uses MJPEG input format by default (reduces bandwidth 5-10x)
@@ -578,9 +683,12 @@ Use this decision guide based on your primary constraint:
 3. Add USB controllers (PCIe expansion cards)
 4. Distribute cameras across different USB controllers
 
-#### If CPU Limited (encoding can't keep up)
+### 🖥️ If CPU Limited
 
-**Symptoms:** High CPU usage during recording, encoding warnings, growing latency
+**Symptoms:**
+- 🔴 High CPU usage during recording
+- 🔴 Encoding warnings
+- 🔴 Growing latency
 
 **Solutions (in order of effectiveness):**
 1. ✓ **Already implemented**: Script uses `-c:v copy` mode during recording (minimal CPU)
@@ -588,9 +696,11 @@ Use this decision guide based on your primary constraint:
 3. Skip automatic transcoding (Ctrl+C) and transcode later when CPU is available
 4. Reduce transcoding quality: Use lower CRF or faster preset in transcode scripts
 
-#### If Storage Limited (running out of disk space)
+### 💾 If Storage Limited
 
-**Symptoms:** Disk filling up quickly, need longer recordings
+**Symptoms:**
+- 🔴 Disk filling up quickly
+- 🔴 Need longer recordings
 
 **Solutions (in order of effectiveness):**
 1. ✓ **Already implemented**: Automatic transcoding after recording compresses files significantly
@@ -599,7 +709,9 @@ Use this decision guide based on your primary constraint:
 4. Lower recording frame rate: Change `-r 60` to `-r 30` or `-r 15` in recording script
 5. Delete original uncompressed files after transcoding completes successfully
 
-#### Quick Reference: Current Script Settings
+---
+
+## 📋 Quick Reference: Current Script Settings
 
 | Feature | Current Setting | Effect | Alternative |
 |---------|----------------|--------|-------------|
@@ -617,7 +729,9 @@ Use this decision guide based on your primary constraint:
 - Consistent frame rate (60 fps) is maintained throughout recording
 - Consider lowering frame rate to 30 fps if 60 fps is not needed for your application
 
-## Notes
+---
+
+## 📝 Notes
 
 - The scripts are designed for Linux systems
 - parallel2video_ffmpeg.sh uses ffmpeg for modern video processing (recommended)
@@ -625,17 +739,19 @@ Use this decision guide based on your primary constraint:
 - zenity provides the GUI for file selection in the conversion step
 - ffmpeg is used extensively for video processing and conversion
 
-## Resources
+---
 
-### Recording optimization
+## 📚 Resources
+
+### 🎬 Recording Optimization
 
 - [Multi camera optimization blog post summary](docs/FFmpeg_Multi-Camera_DeepLabCut_Optimization.md) - Comprehensive guide for multi-camera recording optimization, including USB bandwidth management, encoding parameters, and streaming protocols
 - https://breq.dev/2023/06/21/cameras - Original blog post with detailed technical information about camera streaming pipelines
 
-### Other Resources
+### 📖 Other Resources
 - [FFmpeg Multi-Camera DeepLabCut Optimization](docs/FFmpeg_Multi-Camera_DeepLabCut_Optimization.rtf) - Comprehensive guide on optimizing multi-camera recordings for DeepLabCut, including USB bandwidth management, camera recommendations, and video encoding parameters
 
-### General resources
+### 🌐 General Resources
 
 - https://tldp.org/HOWTO/Webcam-HOWTO/framegrabbers.html
 - https://linux.die.net/man/1/streamer
