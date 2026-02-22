@@ -4,12 +4,10 @@
 Script to simultaneously record from 2 cameras using ffmpeg
 When run requests input for filename and time in minutes
 Outputs:
--Video files (MP4 format with H.264 encoding)
+-Video files (MP4 format with copy mode - no transcoding)
 -Marker text file (start and stop times for recording)
 
-Options:
-- Single channel recording: Uses extractplanes filter to record only Y (luminance) channel for better performance
-- Normal recording: Records full color video
+Uses copy mode (-c:v copy) for faster recording without transcoding
 '
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -69,27 +67,11 @@ setup_recording_directory "$output_dir" "$fin_name"
 # Build device list for parallel execution
 build_device_list
 
-# Ask for single channel recording option
-echo -n "Record single channel (Y/luminance only) for better performance? (y/n): "
-read single_channel
-
-# Ask for copy mode option (no transcoding, faster but no scaling/luminance extraction)
-echo -n "Use copy mode (-c:v copy) for faster recording? (y/n): "
-read copy_mode
-
 # Generate string to be evaluated using ffmpeg for video recording
 # Uses -use_wallclock_as_timestamps 1 to save wall-clock timestamps in video files
-if [[ "$single_channel" =~ ^[Yy]$ ]]; then
-    echo "Recording single channel (Y/luminance only) for better performance..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -i {2} -s 1280x720 -r 30 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
-elif [[ "$copy_mode" =~ ^[Yy]$ ]]; then
-    echo "Recording with copy mode (-c:v copy) - no transcoding, faster capture but no scaling or luminance extraction..."
-    # Note: -c:v copy skips encoding, but we still need v4l2 for input and can't apply filters
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -input_format mjpeg -i {2} -r 60 -c:v copy name_cam{1}.mp4"
-else
-    echo "Recording full color video..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -i {2} -s 1280x720 -r 30 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
-fi
+# Uses copy mode (-c:v copy) for faster recording without transcoding
+echo "Recording with copy mode (-c:v copy) - no transcoding, faster capture..."
+exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -input_format mjpeg -i {2} -r 60 -c:v copy name_cam{1}.mp4"
 
 time_file="${fin_name}_markers.txt"
 
