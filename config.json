@@ -6,5 +6,11 @@
     "/dev/video0",
     "/dev/video2",
     "/dev/video4"
-  ]
+  ],
+  "crop": {
+    "enabled": true,
+    "cam0": [0, 640, 0, 360],
+    "cam1": [0, 640, 0, 360],
+    "cam2": [0, 640, 0, 360]
+  }
 }
