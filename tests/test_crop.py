@@ -28,6 +28,21 @@ def test_config_has_crop_field():
     print("✓ config.json has crop field")
 
 
+def test_crop_has_enabled_flag():
+    """Test that crop has enabled flag"""
+    print("Testing crop enabled flag...")
+    
+    config_file = script_dir / "config.json"
+    with open(config_file, "r") as f:
+        config = json.load(f)
+    
+    crop = config.get("crop", {})
+    assert "enabled" in crop, "crop should have enabled flag"
+    assert isinstance(crop["enabled"], bool), "enabled should be a boolean"
+    
+    print("✓ Crop has enabled flag")
+
+
 def test_crop_structure():
     """Test that crop field has correct structure"""
     print("Testing crop structure...")
@@ -38,8 +53,10 @@ def test_crop_structure():
     
     crop = config.get("crop", {})
     
-    # Check that crop values are arrays with 4 elements each
+    # Check that crop values are arrays with 4 elements each (skip 'enabled' key)
     for cam_key, crop_values in crop.items():
+        if cam_key == "enabled":
+            continue
         assert isinstance(crop_values, list), f"crop['{cam_key}'] should be a list"
         assert len(crop_values) == 4, f"crop['{cam_key}'] should have 4 elements [x1, x2, y1, y2]"
         
@@ -157,6 +174,7 @@ def main():
     
     try:
         test_config_has_crop_field()
+        test_crop_has_enabled_flag()
         test_crop_structure()
         test_transcode_script_has_crop_functions()
         test_crop_config_parsing()

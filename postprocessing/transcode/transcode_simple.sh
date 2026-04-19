@@ -35,11 +35,22 @@ load_crop_settings() {
         return 0
     fi
     
-    # Read crop settings for each camera
+    # Check if crop is enabled
+    local crop_enabled
+    crop_enabled=$(jq -r '.crop.enabled // false' "$config_file" 2>/dev/null)
+    if [[ "$crop_enabled" != "true" ]]; then
+        return 0
+    fi
+    
+    # Read crop settings for each camera (skip 'enabled' key)
     local cam_keys
     mapfile -t cam_keys < <(jq -r '.crop | keys[]' "$config_file" 2>/dev/null)
     
     for cam_key in "${cam_keys[@]}"; do
+        # Skip the enabled flag key
+        if [[ "$cam_key" == "enabled" ]]; then
+            continue
+        fi
         local crop_values
         # Get the array as a space-separated string
         crop_values=$(jq -r ".crop[\"$cam_key\"] | .[] | tostring" "$config_file" 2>/dev/null)
