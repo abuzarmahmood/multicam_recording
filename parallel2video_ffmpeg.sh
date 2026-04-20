@@ -4,45 +4,74 @@
 Script to simultaneously record from 2 cameras using ffmpeg
 When run requests input for filename and time in minutes
 Outputs:
--Video files (MP4 format with H.264 encoding)
+-Video files (MP4 format with copy mode - no transcoding)
 -Marker text file (start and stop times for recording)
 
-Options:
-- Single channel recording: Uses extractplanes filter to record only Y (luminance) channel for better performance
-- Normal recording: Records full color video
+Uses copy mode (-c:v copy) for faster recording without transcoding
 '
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/recording_utils.sh"
+source "$SCRIPT_DIR/utils/recording_utils.sh"
 
-# Function to handle Ctrl+C - ensures timestamps are extracted before exit
+# Function to transcode recorded videos
+transcode_videos() {
+    echo ""
+    echo "Starting transcoding of recorded videos..."
+    echo "This will compress the videos using H.264 with CRF 23 and scale to 960px width."
+    echo ""
+    
+    # Allow a brief moment for user to read the message
+    sleep 2
+    
+    # Check if transcode script exists
+    local transcode_script="$SCRIPT_DIR/postprocessing/transcode/transcode_simple.sh"
+    if [[ ! -f "$transcode_script" ]]; then
+        echo "Warning: Transcode script not found at $transcode_script"
+        echo "Skipping transcoding. You can manually transcode later."
+        return 0
+    fi
+    
+    # Find all .mp4 files that were just recorded (don't have "coded" in filename)
+    local video_files=()
+    while IFS= read -r -d '' file; do
+        local basename_file=$(basename "$file")
+        if [[ "$basename_file" != *"coded"* ]]; then
+            video_files+=("$file")
+        fi
+    done < <(find . -maxdepth 1 -name "*.mp4" -type f -print0)
+    
+    if [[ ${#video_files[@]} -eq 0 ]]; then
+        echo "No video files found to transcode"
+        return 0
+    fi
+    
+    echo "Found ${#video_files[@]} video file(s) to transcode"
+    
+    # Call the transcode script with current directory
+    "$transcode_script" .
+    
+    echo ""
+    echo "All done!"
+}
+
+# Function to handle Ctrl+C
 cleanup_on_interrupt() {
     echo "" >&2
-    echo "Ctrl+C detected. Stopping recording and extracting timestamps..." >&2
+    echo "Ctrl+C detected. Stopping recording..." >&2
     
     # Stop recording with marker
     if [ -n "$time_file" ]; then
         stop_recording "$time_file"
     fi
     
-    # Extract timestamps from recorded video files
-    echo "Extracting timestamps from video files..."
-    for i in $(seq 0 $((NUM_CAMERAS - 1))); do
-        # We are already in the recording directory
-        video_file="name_cam${i}.mp4"
-        timestamps_file="cam${i}_timestamps.txt"
-        if [ -f $video_file ]; then
-            echo "Extracting timestamps from ${video_file}..." 
-            ffmpeg -i $video_file -f mkvtimestamp_v2 -copyts $timestamps_file 2>/dev/null
-            echo "Timestamps saved to ${timestamps_file}" 
-        fi
-    done
+    echo "Recording complete!" >&2
     
-    echo "Recording and timestamp extraction complete!" >&2
+    # Continue to transcoding instead of exiting
+    transcode_videos
     exit 0
 }
 
-# Trap SIGINT (Ctrl+C) to ensure timestamps are written
+# Trap SIGINT (Ctrl+C)
 trap cleanup_on_interrupt SIGINT
 
 # Help flag
@@ -60,36 +89,17 @@ setup_output_directory "$SCRIPT_DIR" || exit 1
 # Generate recording name
 generate_recording_name
 
-# Duration set to very large number, script is killed to stop recording
-duration=180
-
 # Setup recording directory
 setup_recording_directory "$output_dir" "$fin_name"
 
 # Build device list for parallel execution
 build_device_list
 
-# Ask for single channel recording option
-echo -n "Record single channel (Y/luminance only) for better performance? (y/n): "
-read single_channel
-
-# Ask for copy mode option (no transcoding, faster but no scaling/luminance extraction)
-echo -n "Use copy mode (-c:v copy) for faster recording? (y/n): "
-read copy_mode
-
 # Generate string to be evaluated using ffmpeg for video recording
 # Uses -use_wallclock_as_timestamps 1 to save wall-clock timestamps in video files
-if [[ "$single_channel" =~ ^[Yy]$ ]]; then
-    echo "Recording single channel (Y/luminance only) for better performance..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -framerate 30 -i {2} -s 1280x720 -vf \"extractplanes=y\" -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
-elif [[ "$copy_mode" =~ ^[Yy]$ ]]; then
-    echo "Recording with copy mode (-c:v copy) - no transcoding, faster capture but no scaling or luminance extraction..."
-    # Note: -c:v copy skips encoding, but we still need v4l2 for input and can't apply filters
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -input_format mjpeg -framerate 60 -i {2} -c:v copy name_cam{1}.mp4"
-else
-    echo "Recording full color video..."
-    exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -framerate 30 -i {2} -s 1280x720 -c:v libx264 -preset ultrafast -crf 23 -pix_fmt yuv420p name_cam{1}.mp4"
-fi
+# Uses copy mode (-c:v copy) for faster recording without transcoding
+echo "Recording with copy mode (-c:v copy) - no transcoding, faster capture..."
+exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -input_format mjpeg -framerate 60 -i {2} -c:v copy ${base_name}_cam{1}.mp4"
 
 time_file="${fin_name}_markers.txt"
 
@@ -99,16 +109,10 @@ start_recording "$time_file"
 # Execute video recording
 eval $exec_string
 
-# Disable trap for normal exit to avoid duplicate cleanup
-trap - SIGINT
-
 # Stop recording with marker
 stop_recording "$time_file"
 
-# Extract timestamps from recorded video files
-# If not interrupted, extract timestamps here
-if [ $? -eq 0 ]; then
-    cleanup_on_interrupt
-fi
+echo "Recording complete!"
 
-echo "Recording and timestamp extraction complete!"
+# Transcode all recorded videos
+transcode_videos
