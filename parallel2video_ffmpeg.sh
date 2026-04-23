@@ -99,8 +99,8 @@ build_device_list
 echo "Configuring camera exposure settings..."
 while IFS=':' read -r cam_num device; do
     echo "Setting exposure for camera $cam_num ($device)..."
-    v4l2-ctl -d "$device" -c exposure_auto=1
-    v4l2-ctl -d "$device" -c exposure_absolute=333
+    v4l2-ctl -d "$device" -c auto_exposure=1
+    v4l2-ctl -d "$device" -c exposure_time_absolute=333
 done <<< "$DEVICE_LIST"
 echo "Camera exposure configuration complete."
 echo ""
