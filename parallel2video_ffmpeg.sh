@@ -95,11 +95,21 @@ setup_recording_directory "$output_dir" "$fin_name"
 # Build device list for parallel execution
 build_device_list
 
+# Set camera exposure settings before recording
+echo "Configuring camera exposure settings..."
+while IFS=':' read -r cam_num device; do
+    echo "Setting exposure for camera $cam_num ($device)..."
+    v4l2-ctl -d "$device" -c auto_exposure=1
+    v4l2-ctl -d "$device" -c exposure_time_absolute=333
+done <<< "$DEVICE_LIST"
+echo "Camera exposure configuration complete."
+echo ""
+
 # Generate string to be evaluated using ffmpeg for video recording
 # Uses -use_wallclock_as_timestamps 1 to save wall-clock timestamps in video files
 # Uses copy mode (-c:v copy) for faster recording without transcoding
 echo "Recording with copy mode (-c:v copy) - no transcoding, faster capture..."
-exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -input_format mjpeg -i {2} -r 60 -c:v copy ${base_name}_cam{1}.mp4"
+exec_string="echo -e '$DEVICE_LIST' | parallel -j $NUM_CAMERAS --colsep ':' ffmpeg -use_wallclock_as_timestamps 1 -copyts -f v4l2 -video_size 1280x720 -input_format mjpeg -framerate 30 -i {2} -c:v copy ${base_name}_cam{1}.mp4"
 
 time_file="${fin_name}_markers.txt"
 
